@@ -1,0 +1,106 @@
+#!/bin/bash
+
+### Env Variables ###
+[ -z "$TIMETABLE_DIR" ] && TIMETABLE_DIR="$HOME/files/Comsats/Timetable"
+OLD_PDF_NAME="$(ls $TIMETABLE_DIR)"
+
+### Functions ###
+function checkDeps() {
+  local missing=()
+  for cmd in "$@"; do
+    command -v "$cmd" >/dev/null 2>&1 || missing+=("$cmd")
+  done
+
+  if ((${#missing[@]})); then
+    echo "Missing required dependencies:" >&2
+    for cmd in "${missing[@]}"; do
+      echo "  - $cmd" >&2
+    done
+    exit 3
+  fi
+}
+
+function help() {
+  echo "Usage: $0 <argument>"
+  echo "Arguments        |        Function"
+  echo "-h or --help     | print this message"
+  echo "--keep-old-pdf   | don't delete the old pdf"
+}
+
+function fetchPdfName() {
+  printf $(
+    curl -sk "$1" |
+      grep -oP 'href="\K.+-classes\.pdf' || {
+      echo "pdfname fetch failed :("
+      exit 5
+    }
+  )
+}
+
+function fetchPdf() {
+  curl -k -o full_timetable.pdf "$1" || {
+    echo ":( Download failed! Try again."
+    exit 6
+  }
+}
+
+function extractPage() {
+  page="$(pdfgrep -n -i 'sp25-bse-a' "$1" | cut -d: -f1 | sort -u)"
+  pdftk "$1" cat "$page" output "$2"
+  rm "$1"
+}
+
+### Error Handeling ###
+# Check internet access
+ping -c 1 google.com &>/dev/null || {
+  echo "Internet is not available."
+  exit 1
+}
+
+# check if TIMETABLE_DIR exists and is a directory
+[ -d "$TIMETABLE_DIR" ] || {
+  echo "TIMETABLE_DIR: $TIMETABLE_DIR is not a valid directory. change the environment variable"
+  exit 2
+}
+
+checkDeps curl grep pdfgrep pdftk
+
+### Argument Handling ###
+if [ "$1" = "--keep-old-pdf" ]; then
+  keepOld=true
+elif [ "$1" = "-h" -o "$1" = "--help" ]; then
+  help
+  exit 0
+elif [ -n "$1" ]; then
+  echo "invalid argument"
+  help
+  exit 4
+fi
+
+### Variables ###
+baseUrl="https://lahore.comsats.edu.pk/student"
+timeTableWebPage="$baseUrl/time-table.aspx"
+pdfname="$(fetchPdfName "$timeTableWebPage")"
+pdfUrl="$baseUrl/$pdfname"
+
+### Start ###
+if [ -n "$OLD_PDF_NAME" ]; then
+  [ "$pdfname" = "$OLD_PDF_NAME" ] && echo "Timetable has not changed." && exit 0 || {
+    echo "Timetable has updated."
+    (keepOld) || {
+      echo "deleteing old pdf $OLD_PDF_NAME"
+      rm "$TIMETABLE_DIR/$OLD_PDF_NAME"
+    }
+    echo "Downloading Timetable..."
+  }
+else
+  echo "Old Pdf not found."
+  echo "Downloading Timetable..."
+fi
+
+fetchPdf "$pdfUrl"
+extractPage "full_timetable.pdf" "$pdfname"
+mv "$pdfname" "$TIMETABLE_DIR"
+echo "Timetable Updated Successfully."
+echo "Old Timetable Name: $OLD_PDF_NAME"
+echo "New Timetable Name: $pdfname"

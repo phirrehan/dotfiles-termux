@@ -1,0 +1,83 @@
+#!/bin/bash
+
+[ -z "$MILK_LIST" ] && MILK_LIST="$HOME/files/milkList"
+
+# Functions
+writeNagha() {
+  # writeNagha() expects 1 argument for name of person.
+
+  file="$MILK_LIST/$1/$recordName"
+  [ ! -f "$file" ] && touch $file
+  grep -iq "$naghaDate" "$file" ||
+    echo "Nagha on $naghaDate" >>"$file"
+}
+writeDouble() {
+  # writeDouble() expects 1 argument for name of person.
+
+  file="$MILK_LIST/$1/$recordName"
+  [ ! -f "$file" ] && touch $file
+  grep -iq "$doubleDate" "$file" ||
+    echo "Double Milk on $doubleDate" >>"$file"
+}
+
+# Argument handeling
+if [ "$1" = "nagha" ]; then
+  naghaFlag=true
+elif [ "$1" = "double" ]; then
+  doubleFlag=true
+else
+  echo "error: invalid or no argument provided"
+  exit 1
+fi
+
+# Check for errors
+[ ! -d $MILK_LIST/taiAmmi ] &&
+  echo "Error: directory $MILK_LIST/taiAmmi does not exist." && exit 2
+[ ! -d $MILK_LIST/abji ] &&
+  echo "Error: directory $MILK_LIST/abji does not exist." && exit 3
+
+echo "Select the name of record holder for entry:"
+echo "1) Abji"
+echo "2) Tai Ammi"
+echo "3) All"
+read ans
+case $ans in
+1) abji=true ;;
+2) taiAmmi=true ;;
+"")
+3) taiAmmi=true && abji=true ;;
+# default
+*) echo "Error: invalid input." && exit 4 ;;
+esac
+
+# Input
+read -p "Enter number of days: " input
+[ -z "$input" ] && input='0'
+[[ "$input" =~ ^-?[0-9]+$ ]] || {
+  echo "Error: invalid input."
+  exit 5
+}
+echo ""
+
+# Date format: YYYY-MM and YYYY-MM-DD respectively
+[ "$naghaFlag" = "true" ] && recordName=$(date -d "$input days ago" +%m-%Y) ||
+  recordName=$(date -d "$input days" +%m-%Y)
+[ "$naghaFlag" = "true" ] && naghaDate=$(date -d "$input days ago" +%Y-%m-%d) ||
+  doubleDate=$(date -d "$input days" +%Y-%m-%d)
+
+# Abji
+[ "$naghaFlag" = "true" ] && [ "$abji" = "true" ] && writeNagha abji
+[ "$doubleFlag" = "true" ] && [ "$abji" = "true" ] && writeDouble abji
+
+# Tai Ammi
+[ "$naghaFlag" = "true" ] && [ "$taiAmmi" = "true" ] && writeNagha taiAmmi
+[ "$doubleFlag" = "true" ] && [ "$taiAmmi" = "true" ] && writeDouble taiAmmi
+
+echo "Record:"
+[ "$taiAmmi" = "true" ] && echo "Tai Ammi's Record" &&
+  cat $MILK_LIST/taiAmmi/$recordName && echo ""
+[ "$abji" = "true" ] && echo "Abji's Record" &&
+  cat $MILK_LIST/abji/$recordName && echo ""
+
+echo "Enter any key to exit: "
+read ans
