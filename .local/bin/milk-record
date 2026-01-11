@@ -1,23 +1,40 @@
 #!/bin/bash
 
-[ -z "$MILK_LIST" ] && MILK_LIST="$HOME/files/milkList"
+[ -z "$MILK_LIST_DIR" ] && MILK_LIST_DIR="$HOME/files/milkList"
 
 # Functions
+manual() {
+  echo "This script writes the date(of Nagha or Double Milk) in format YYYY-MM-DD in a file in $MILK_LIST_DIR/<recordHolder>/<month>. The month is written in format MM-YYYY and it is automatically generated if its not created."
+  echo ""
+  echo "Usage: $0 <mode> <recordHolder> <days>"
+  echo "Example: $0 nagha Jeremy 0"
+  echo ""
+  echo "Arguments"
+  echo "mode may be 'nagha' or 'double'. Note that --help or -h may be used as the first argument to display this manual."
+  echo "recordHolder is the name of the person whose record is kept. It is stored in $MILK_LIST_DIR."
+  echo "days must be an integer. 0 means today. Negative number means day in past. Positive number means day in future."
+}
+
 writeNagha() {
   # writeNagha() expects 1 argument for name of person.
 
-  file="$MILK_LIST/$1/$recordName"
+  file="$MILK_LIST_DIR/$1/$recordName"
   [ ! -f "$file" ] && touch $file
-  grep -iq "$naghaDate" "$file" ||
-    echo "Nagha on $naghaDate" >>"$file"
+  grep -qi "$Date" "$file" ||
+    echo "Nagha on $Date" >>"$file"
 }
 writeDouble() {
   # writeDouble() expects 1 argument for name of person.
 
-  file="$MILK_LIST/$1/$recordName"
+  file="$MILK_LIST_DIR/$1/$recordName"
   [ ! -f "$file" ] && touch $file
-  grep -iq "$doubleDate" "$file" ||
-    echo "Double Milk on $doubleDate" >>"$file"
+  grep -qi "$Date" "$file" ||
+    echo "Double Milk on $Date" >>"$file"
+}
+displayRecord() {
+  # displayRecrod() expects 1 argument for name of person.
+  echo -e "$1's Record\n" &&
+    cat $MILK_LIST_DIR/$1/$recordName && echo ""
 }
 
 # Argument handeling
@@ -25,59 +42,41 @@ if [ "$1" = "nagha" ]; then
   naghaFlag=true
 elif [ "$1" = "double" ]; then
   doubleFlag=true
+elif [ "$1" = "--help" -o "$1" = "-h" ]; then
+  manual
 else
   echo "error: invalid or no argument provided"
   exit 1
 fi
 
+recordHolder="$2"
+days="$3"
+
 # Check for errors
-[ ! -d $MILK_LIST/taiAmmi ] &&
-  echo "Error: directory $MILK_LIST/taiAmmi does not exist." && exit 2
-[ ! -d $MILK_LIST/abji ] &&
-  echo "Error: directory $MILK_LIST/abji does not exist." && exit 3
+[ ! -d $MILK_LIST_DIR/taiAmmi ] &&
+  echo "Error: directory $MILK_LIST_DIR/taiAmmi does not exist." && exit 2
+[ ! -d $MILK_LIST_DIR/abji ] &&
+  echo "Error: directory $MILK_LIST_DIR/abji does not exist." && exit 3
+[ -z $recordHolder ] &&
+  echo "Error: second argument not provided" && manual && exit 4
+[ -z $days ] &&
+  echo "Error: third argument not provided" && manual && exit 5
 
-echo "Select the name of record holder for entry:"
-echo "1) Abji"
-echo "2) Tai Ammi"
-echo "3) All"
-read ans
-case $ans in
-1) abji=true ;;
-2) taiAmmi=true ;;
-"")
-3) taiAmmi=true && abji=true ;;
-# default
-*) echo "Error: invalid input." && exit 4 ;;
-esac
+# Date format: MM-YYYY and YYYY-MM-DD respectively
+recordName=$(date -d "$days days" +%m-%Y)
+Date=$(date -d "$days days" +%Y-%m-%d)
 
-# Input
-read -p "Enter number of days: " input
-[ -z "$input" ] && input='0'
-[[ "$input" =~ ^-?[0-9]+$ ]] || {
-  echo "Error: invalid input."
-  exit 5
-}
-echo ""
-
-# Date format: YYYY-MM and YYYY-MM-DD respectively
-[ "$naghaFlag" = "true" ] && recordName=$(date -d "$input days ago" +%m-%Y) ||
-  recordName=$(date -d "$input days" +%m-%Y)
-[ "$naghaFlag" = "true" ] && naghaDate=$(date -d "$input days ago" +%Y-%m-%d) ||
-  doubleDate=$(date -d "$input days" +%Y-%m-%d)
-
-# Abji
-[ "$naghaFlag" = "true" ] && [ "$abji" = "true" ] && writeNagha abji
-[ "$doubleFlag" = "true" ] && [ "$abji" = "true" ] && writeDouble abji
-
-# Tai Ammi
-[ "$naghaFlag" = "true" ] && [ "$taiAmmi" = "true" ] && writeNagha taiAmmi
-[ "$doubleFlag" = "true" ] && [ "$taiAmmi" = "true" ] && writeDouble taiAmmi
-
-echo "Record:"
-[ "$taiAmmi" = "true" ] && echo "Tai Ammi's Record" &&
-  cat $MILK_LIST/taiAmmi/$recordName && echo ""
-[ "$abji" = "true" ] && echo "Abji's Record" &&
-  cat $MILK_LIST/abji/$recordName && echo ""
-
-echo "Enter any key to exit: "
-read ans
+# Write Naghas or Double Milk
+if [ "$recordHolder" = "all" ]; then
+  for name in $(ls $MILK_LIST_DIR); do
+    [ "$naghaFlag" = "true" ] && writeNagha $name
+    [ "$doubleFlag" = "true" ] && writeDouble $name
+    displayRecord $name
+    echo ""
+  done
+else
+  [ "$naghaFlag" = "true" ] && writeNagha $recordHolder
+  [ "$doubleFlag" = "true" ] && writeDouble $recordHolder
+  displayRecord $recordHolder
+  echo ""
+fi
