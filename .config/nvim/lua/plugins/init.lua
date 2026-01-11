@@ -71,15 +71,6 @@ return {
     "rcarriga/nvim-notify",
   },
   {
-    "toppair/peek.nvim",
-    event = { "VeryLazy" },
-    build = "deno task --quiet build:fast",
-    cmd = { "PeekOpen", "PeekClose" },
-    config = function()
-      require "configs.peek"
-    end,
-  },
-  {
     "NeogitOrg/neogit",
     dependencies = {
       "nvim-lua/plenary.nvim", -- required
