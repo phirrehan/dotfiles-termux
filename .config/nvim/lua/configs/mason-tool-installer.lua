@@ -18,7 +18,6 @@ require("mason-tool-installer").setup {
     "shfmt",
     "sql-formatter",
     "sqls",
-    "luaformatter",
     "tailwindcss-language-server",
     "templ",
     "typescript-language-server",
