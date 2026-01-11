@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# Run fzfmenu.sh to get the selected directory
+selected_dir=$(fd --type directory --hidden . ~ | fuzzel --dmenu)
+echo "selected_dir: $selected_dir"
+[ -z "$selected_dir" ] && exit 1
+
+# Get the action to perform
+index=$(
+  printf "1 Terminal Tmux\0icon\x1ffoot\n2 Dolphin\0icon\x1forg.kde.dolphin\n3 Yazi\0icon\x1fyazi\n4 Nvim\0icon\x1fnvim" |
+    fuzzel --dmenu |
+    awk '{ print $1 }'
+)
+[ -z "$index" ] && exit 2
+
+# Perform the action
+case $index in
+1) foot --working-directory "$selected_dir" -e sh -c "tmux -u new-session" ;;
+2) dolphin "$selected_dir" ;;
+3) foot --working-directory "$selected_dir" -e sh -c "cat ~/.local/state/caelestia/sequences.txt && yazi" ;;
+4) foot --working-directory "$selected_dir" -e sh -c "nvim" ;;
+esac

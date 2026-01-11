@@ -1,0 +1,83 @@
+#!/bin/sh
+
+# This is a wrapper script for playerctl that only controls a specific media player stored in ~/.local/bin/.player.txt
+# Functions
+help() {
+  printf "Usage: %s [Option]\n\nOptions:\nhelp: print this manual.\nplay-pause: toggle the media playing.\nvolume [0-1]<+/-/nothing>\nnext: play next media.\nprevious: play previous media.\nloop: toggle loop state.\n" "$command"
+}
+
+toggleplay() {
+  playerctl $args play-pause
+}
+
+volume() {
+  number=$(echo -n "$1" | grep -Eo "[0-9]+")
+  operator=$(echo -n "$1" | grep -Eo "(\+)|(-)")
+
+  ! $isPlayerMpd && {
+    number=$(echo "scale=2; $number / 100" | bc)
+    playerctl $args volume "$number$operator"
+  } ||
+    mpc volume "$operator$number"
+}
+
+next() {
+  playerctl $args next
+}
+
+prev() {
+  playerctl $args previous
+}
+
+toggleloop() {
+  playerctl $args loop | grep -qi "none" &&
+    playerctl $args loop track ||
+    playerctl $args loop none
+}
+
+choose() {
+  chosen=$(playerctl -l | fuzzel --dmenu "Choose Player")
+  echo $chosen >~/.local/bin/.player.txt
+}
+
+# Variable Initialization
+topPlayer=$(playerctl -l | head -n 1)
+chosen=$(cat ~/.local/bin/.player.txt)
+[ -n "$chosen" ] && args="--player $chosen"
+command="$0"
+
+# Start
+echo "chosen: $chosen"
+if [ -n "$chosen" ]; then
+  [ "$chosen" = "mpd" ] && isPlayerMpd=true || isPlayerMpd=false
+else
+  [ "$topPlayer" = "mpd" ] && isPlayerMpd=true || isPlayerMpd=false
+fi
+
+case "$1" in
+"help" | "--help")
+  help
+  ;;
+"play-pause")
+  toggleplay
+  ;;
+"volume")
+  volume "$2"
+  ;;
+"next")
+  next
+  ;;
+"previous")
+  prev
+  ;;
+"loop")
+  toggleloop
+  ;;
+"choose")
+  choose
+  ;;
+*)
+  printf "invalid option.\n\n"
+  help
+  ;;
+esac
