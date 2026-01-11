@@ -7,7 +7,7 @@ echo "selected_dir: $selected_dir"
 
 # Get the action to perform
 index=$(
-  printf "1 Terminal Tmux\0icon\x1ffoot\n2 Dolphin\0icon\x1forg.kde.dolphin\n3 Yazi\0icon\x1fyazi\n4 Nvim\0icon\x1fnvim" |
+  printf "1 Terminal Tmux\n2 Dolphin\0icon\x1forg.kde.dolphin\n3 Yazi\0icon\x1fyazi\n4 Nvim\0icon\x1fnvim" |
     ~/.local/bin/fzfmenu "Select an application" |
     awk '{ print $1 }'
 )
@@ -15,7 +15,7 @@ index=$(
 
 # Perform the action
 case $index in
-1) foot --working-directory "$selected_dir" -e sh -c "tmux -u new-session" ;;
-2) foot --working-directory "$selected_dir" -e sh -c "yazi" ;;
-3) foot --working-directory "$selected_dir" -e sh -c "nvim" ;;
+1) tmux -u new-session ;;
+2) yazi ;;
+3) nvim ;;
 esac
