@@ -3,7 +3,7 @@
 # This is a wrapper script for playerctl that only controls a specific media player stored in ~/.local/bin/.player.txt
 # Functions
 help() {
-  printf "Usage: %s [Option]\n\nOptions:\nhelp: print this manual.\nplay-pause: toggle the media playing.\nvolume [0-1]<+/-/nothing>\nnext: play next media.\nprevious: play previous media.\nloop: toggle loop state.\n" "$command"
+  printf "Usage: %s [Option]\n\nOptions:\nhelp: print this manual.\nplay-pause: toggle the media playing.\nvolume [0-1]<+/-/nothing>\nnext: play next media.\nprevious: play previous media.\nloop: toggle loop state.\n" "$1"
 }
 
 toggleplay() {
@@ -44,7 +44,6 @@ choose() {
 topPlayer=$(playerctl -l | head -n 1)
 chosen=$(cat ~/.local/bin/.player.txt)
 [ -n "$chosen" ] && args="--player $chosen"
-command="$0"
 
 # Start
 echo "chosen: $chosen"
@@ -55,8 +54,8 @@ else
 fi
 
 case "$1" in
-"help" | "--help")
-  help
+"help" | "--help" | "-h")
+  help "$0"
   ;;
 "play-pause")
   toggleplay
