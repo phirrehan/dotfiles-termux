@@ -1,7 +1,7 @@
 # ======= Widgets =======
 # Copy Command 
 copy-command() { 
-  echo -n "$BUFFER" | wl-copy
+  echo -n "$BUFFER" | termux-clipboard-set
   zle -M "Copied to Clipboard"
 }
 
