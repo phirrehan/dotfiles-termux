@@ -1,17 +1,14 @@
-if [ -n "$TERMUX_VERSION" ]; then
-  # Termux Aliases
-  alias i="nala update && nala install $1"
-  alias rem="nala remove $1"
-  alias s="nala search $1"
-  alias u="nala update && nala upgrade"
-  alias c="clear"
-fi
-
 # System
 alias ls="ls --color=auto"
 alias Ls="ls -A --color=auto"
 alias grep="grep --color=auto"
-alias change="cat ~/.local/state/caelestia/sequences.txt"
+alias c="clear"
+
+# Package Management
+alias i="nala update && nala install $1"
+alias rem="nala remove $1"
+alias s="nala search $1"
+alias u="nala update && nala upgrade"
 
 # Zsh Config
 alias svim="sudo -E nvim"
@@ -19,15 +16,15 @@ alias sz="source ~/.zshrc"
 
 
 # Global Aliases
-alias -g C="| wl-copy"
+alias -g C="| termux-clipboard-set"
 
 # Suffix Aliases
-alias -s pdf='mupdf'
-alias -s png='gwenview'
-alias -s jpeg='gwenview'
-alias -s jpg='gwenview'
-alias -s mp4='mpv'
-alias -s mkv='mpv'
+alias -s pdf='termux-open'
+alias -s png='termux-open'
+alias -s jpeg='termux-open'
+alias -s jpg='termux-open'
+alias -s mp4='termux-open'
+alias -s mkv='termux-open'
 alias -s md='bat'
 alias -s yaml='bat -l'
 alias -s json='jless'
