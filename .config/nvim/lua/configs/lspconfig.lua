@@ -3,6 +3,7 @@ require("nvchad.configs.lspconfig").defaults()
 local servers = {
   "html",
   "cssls",
+  "clangd",
   "ts_ls",
   "jdtls",
   "jsonls",
