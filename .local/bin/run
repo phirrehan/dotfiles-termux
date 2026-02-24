@@ -18,20 +18,18 @@ PY() {
 }
 
 C() {
-  clang "$file_path" -o "$file_dir/$file_without_ext.exe" && {
-    "$file_dir/$file_without_ext.exe"
-    rm "$file_dir/$file_without_ext.exe"
-  }
+  clang "$file_path" -o "$file_dir/$file_without_ext" &&
+    "$file_dir/$file_without_ext"
+  rm "$file_dir/$file_without_ext" >/dev/null
 }
 
 CPP() {
   if ls | grep -q "Makefile"; then
     make >/dev/null && ./main && rm main
   else
-    clang++ "$file_path" -o "$file_dir/$file_without_ext.exe" && {
-      "$file_dir/$file_without_ext.exe"
-      rm "$file_dir/$file_without_ext.exe"
-    }
+    clang++ "$file_path" -o "$file_dir/$file_without_ext" &&
+      "$file_dir/$file_without_ext"
+    rm "$file_dir/$file_without_ext" >/dev/null
   fi
 }
 
