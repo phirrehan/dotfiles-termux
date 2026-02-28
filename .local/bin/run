@@ -24,12 +24,13 @@ C() {
 }
 
 CPP() {
-  if ls | grep -q "Makefile"; then
-    make >/dev/null && ./main && rm main
+  if ls "$file_dir" | grep -q "Makefile"; then
+    make -C "$file_dir" clean >/dev/null
+    make -C "$file_dir" >/dev/null && "$file_dir/$file_without_ext"
   else
-    clang++ "$file_path" -o "$file_dir/$file_without_ext" &&
+    rm "$file_dir/$file_without_ext" 2>/dev/null
+    g++ "$file_path" -o "$file_dir/$file_without_ext" &&
       "$file_dir/$file_without_ext"
-    rm "$file_dir/$file_without_ext" >/dev/null
   fi
 }
 

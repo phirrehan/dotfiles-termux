@@ -1,13 +1,15 @@
 #!/bin/sh
 
-# Export env variable for running through MacroDroid or Termux:Widget
-export PASSWORD_STORE_DIR="$HOME/files/Passwords/store"
+# If password name is provided in argument
+[ -n "$1" ] && arg1="$(basename $1)" &&
+  arg1_without_ext=${arg1%.*}
+[ -f "$PASSWORD_STORE_DIR/$1.gpg" ] && pass -c "$1" && exit 0
 
-## Get password name
-password_name=$(ls $PASSWORD_STORE_DIR | sed 's/\.gpg$//' | fzf --pointer '=>' --layout reverse --info hidden --header 'Select a Password')
+# Otherwise get password name using fzf
+password_name=$(ls $PASSWORD_STORE_DIR | sed 's/\.gpg$//' | fuzzel --dmenu)
 
 # Exit if no password is selected
-[ -z "$password_name" ] && exit 0
+[ -z "$password_name" ] && exit 1
 
 # Copy password
 pass -c "$password_name"
