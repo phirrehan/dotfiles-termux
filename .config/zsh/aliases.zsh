@@ -5,9 +5,6 @@ alias grep="grep --color=auto"
 alias c="clear"
 
 # Package Management
-alias i="nala update && nala install $1"
-alias rem="nala remove $1"
-alias s="nala search $1"
 alias u="nala update && nala upgrade"
 
 # Zsh Config
