@@ -1,5 +1,7 @@
 #!/bin/sh
 
+export PASSWORD_STORE_DIR=~/files/Passwords/store
+
 # If password name is provided in argument
 [ -n "$1" ] && {
   arg1="$(basename $1)"
