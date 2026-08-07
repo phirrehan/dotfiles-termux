@@ -1,7 +1,7 @@
 # Zinint
 
 # Source Zinit
-source "$HOME/.local/share/zinit/zinit.git"
+source "$HOME/.local/share/zinit/zinit.git/zinit.zsh"
 
 # Add in Zsh Plugins
 zinit light zsh-users/zsh-syntax-highlighting
