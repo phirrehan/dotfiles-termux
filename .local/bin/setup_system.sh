@@ -36,12 +36,13 @@ step() {
 ###############
 
 install_packages() {
+  apt update
   apt install nala -y
   nala install -y \
     git stow zsh curl \
-    neovim mpv foot fastfetch tmux yazi \
-    fzf fd ffmpeg pdftk pdfgrep ttf-jetbrains-mono-nerd \
-    7zip unrar unzip python go rust \
+    neovim fastfetch tmux yazi termux-api\
+    fzf fd ffmpeg pdftk pdfgrep \
+    7zip unrar unzip python golang rust nodejs \
 }
 
 stow_dotfiles() {
@@ -101,6 +102,25 @@ nvim_treesitter_install() {
   nvim --headless "+TSInstallSync all" +qa
 }
 
+setup_termux() {
+  # silent login
+  touch ~/.hushlogin
+
+  # connect phone's storage with termux
+  termux-setup-storage
+
+  # setup termux widgets
+  mkdir -p ~/.shortcuts
+  cp -r ~/dotfiles-termux/.local/bin/ ~/.shortcuts
+
+  # install JetBrainsMonoNerd font
+  curl -fLo JetBrainsMono.zip https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip
+  unzip JetBrainsMono.zip -d JetBrainsMono
+  cp JetBrainsMono/JetBrainsMonoNerdFont-Regular.ttf ~/.termux/font.ttf
+  rm -rf JetBrainsMono
+  rm JetBrainsMono.zip
+}
+
 setup_yazi_theme() {
   ya pkg add yazi-rs/flavors:catppuccin-mocha || return 1
 
@@ -126,6 +146,7 @@ step "Install tpm + tmux plugins" setup_tpm
 step "neovim: sync lazy plugins" nvim_lazy_sync
 step "neovim: MasonToolsInstall" nvim_mason_install
 step "neovim: TSInstallSync all" nvim_treesitter_install
+step "Termux Setup" setup_termux
 step "Install Yazi catppuccin theme" setup_yazi_theme
 
 cat <<'EOF'
