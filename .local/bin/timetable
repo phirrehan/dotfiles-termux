@@ -1,13 +1,27 @@
-#!/bin/bash
+#!/bin/sh
 
-### Env Variables ###
-[ -z "$TIMETABLE_DIR" ] && TIMETABLE_DIR="$HOME/files/Comsats/Timetable"
-OLD_PDF_NAME="$(ls $TIMETABLE_DIR)"
+
+### Variables ###
+timetable_dir="$HOME/files/comsats/timetable"
+old_pdf_name="$(ls $timetable_dir | grep -oP '.+-classes\.pdf')"
+base_url="https://lahore.comsats.edu.pk"
+search_url="$base_url/downloads.aspx"
+download_url="$base_url/student" #incomplete as of yet
 
 ### Functions ###
-function checkDeps() {
+help() {
+  cat <<EOF
+  Usage: $0 <args>
+  Arguments        |        Function"
+  -h or --help     | print this message"
+  get_pdfname      | fetches the pdfname from timetable directory
+  update           | update the timetable"
+EOF
+}
+check_deps() {
   local missing=()
-  for cmd in "$@"; do
+  local deps=(curl_chrome131_android grep pdfgrep pdftk)
+  for cmd in "${deps[@]}"; do
     command -v "$cmd" >/dev/null 2>&1 || missing+=("$cmd")
   done
 
@@ -19,89 +33,63 @@ function checkDeps() {
     exit 3
   fi
 }
-
-function help() {
-  echo "Usage: $0 <argument>"
-  echo "Arguments        |        Function"
-  echo "-h or --help     | print this message"
-  echo "--keep-old-pdf   | don't delete the old pdf"
+fetch_pdfname() {
+  html=$(curl_chrome131_android -s "$search_url") &&
+   printf $(echo $html | grep -oE '[^/]+-classes\.pdf') ||
+    echo "pdfname fetch failed :(" && exit 5
 }
-
-function fetchPdfName() {
-  printf $(
-    curl -sk "$1" |
-      grep -oP 'href="\K.+-classes\.pdf' || {
-      echo "pdfname fetch failed :("
-      exit 5
-    }
-  )
-}
-
-function fetchPdf() {
-  curl -k -o full_timetable.pdf "$1" || {
+download_pdf() {
+  rm "$timetable_dir/full_timetable.pdf" 2>/dev/null
+  curl_chrome131_android -o full_timetable.pdf "$download_url/$pdfname" || {
     echo ":( Download failed! Try again."
     exit 6
   }
 }
-
-function extractPage() {
-  page="$(pdfgrep -n -i 'sp25-bse-a' "$1" | cut -d: -f1 | sort -u)"
-  pdftk "$1" cat "$page" output "$2"
-  rm "$1"
+extract_page() {
+  local page="$(pdfgrep -n -i 'sp25-bse-a' "full_timetable.pdf" | cut -d: -f1 | sort -u)"
+  pdftk "full_timetable.pdf" cat "$page" output "$pdfname"
+  mv "$pdfname" full_timetable.pdf "$timetable_dir"
+}
+update_timetable() {
+  # check internet access
+  ping -c 1 google.com &>/dev/null || {
+    echo "Internet is not available."
+    exit 1
+  }
+  if [ -n "$old_pdf_name" ]; then
+    if [ "$pdfname" = "$old_pdf_name" ]; then
+      echo "Timetable has not changed." 
+      exit 0 
+    else
+      echo "Timetable has updated."
+      echo "deleteing old pdf: $old_pdf_name"
+      rm "$timetable_dir/$old_pdf_name"
+      echo "Downloading Timetable..."
+    fi
+  else
+    echo "Old Pdf not found."
+    echo "Downloading Timetable..."
+  fi
+  download_pdf && extract_page
+  echo "Timetable Updated Successfully."
 }
 
 ### Error Handeling ###
-# Check internet access
-ping -c 1 google.com &>/dev/null || {
-  echo "Internet is not available."
-  exit 1
-}
-
-# check if TIMETABLE_DIR exists and is a directory
-[ -d "$TIMETABLE_DIR" ] || {
-  echo "TIMETABLE_DIR: $TIMETABLE_DIR is not a valid directory. change the environment variable"
+## check dependencies
+check_deps 
+## check if timetable_dir exists and is a directory
+[ -d "$timetable_dir" ] || {
+  echo "timetable_dir: $timetable_dir is not a valid directory."
   exit 2
 }
 
-checkDeps curl grep pdfgrep pdftk
-
 ### Argument Handling ###
-if [ "$1" = "--keep-old-pdf" ]; then
-  keepOld=true
-elif [ "$1" = "-h" -o "$1" = "--help" ]; then
-  help
-  exit 0
-elif [ -n "$1" ]; then
-  echo "invalid argument"
-  help
-  exit 4
-fi
-
-### Variables ###
-baseUrl="https://lahore.comsats.edu.pk/student"
-timeTableWebPage="$baseUrl/time-table.aspx"
-pdfname="$(fetchPdfName "$timeTableWebPage")"
-pdfUrl="$baseUrl/$pdfname"
-
-### Start ###
-if [ -n "$OLD_PDF_NAME" ]; then
-  [ "$pdfname" = "$OLD_PDF_NAME" ] && echo "Timetable has not changed." && exit 0 || {
-    echo "Timetable has updated."
-    (keepOld) || {
-      echo "deleteing old pdf $OLD_PDF_NAME"
-      rm "$TIMETABLE_DIR/$OLD_PDF_NAME"
-    }
-    echo "Downloading Timetable..."
-  }
-else
-  echo "Old Pdf not found."
-  echo "Downloading Timetable..."
-fi
-
-fetchPdf "$pdfUrl"
-extractPage "full_timetable.pdf" "$pdfname"
-mv "$pdfname" "$TIMETABLE_DIR"
-echo "Timetable Updated Successfully."
-echo "Old Timetable Name: $OLD_PDF_NAME"
-echo "New Timetable Name: $pdfname"
-termux-open "$TIMETABLE_DIR/pdfname"
+case "$1" in
+  -h|--help) help ;;
+  get_pdfname) echo "$old_pdf_name";;
+  update)
+    pdfname=$(fetch_pdfname "$search_url")
+    update_timetable
+    ;;
+  *) echo "error: invalid argument. use -h or --help for usage."; exit 4 ;;
+esac
