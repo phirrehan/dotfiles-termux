@@ -37,12 +37,12 @@ step() {
 
 install_packages() {
   apt update
-  apt install nala -y
-  nala install -y \
+  apt install nala
+  nala install \
     git stow zsh curl \
-    neovim fastfetch tmux yazi termux-api\
+    neovim fastfetch tmux yazi termux-api \
     fzf fd ffmpeg pdftk pdfgrep \
-    7zip unrar unzip python golang rust nodejs \
+    7zip unrar unzip python golang rust nodejs
 }
 
 stow_dotfiles() {
