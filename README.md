@@ -4,7 +4,25 @@ This repo is a fork of my `dotfiles` repo. It is made specifically for termux en
 
 > Note: This repo is for android terminal `termux`. If you want x86_64 architecture check the [dotfiles](https://github.com/phirrehan/dotfiles) repo instead.
 
-# Requirements
+These dotfiles contains configurations for `zsh`, `neovim`, `yazi` and `tmux`.
+
+# Quick Setup
+
+Clone the repo into your home directory and run the bootstrap script:
+
+```
+cd ~
+git clone https://github.com/phirrehan/dotfiles-termux.git
+cd ./dotfiles-termux
+./.local/bin/setup_system.sh
+```
+
+`setup_system` installs all dependencies, stows the configs into `$HOME`, sets up
+zsh (zinit), tmux (tpm + plugins) and neovim (lazy + mason + treesitter, headless).
+Each step is independent — a failure logs a warning and the rest still run, so it
+is safe to re-run.
+
+# Manual Setup
 
 Ensure you have git and stow installed:
 
@@ -13,22 +31,22 @@ apt update
 apt install git stow --needed
 ```
 
-These dotfiles contains configurations for `zsh`, `neovim`, `tmux`, `mpd`, and `rmpc`. Install these applications for using my dotfiles:
+Install these applications for using my dotfiles:
 
 ```zsh
-apt install zsh fzf neovim tmux mpd mpc rmpc
+apt install zsh fzf neovim tmux
 ```
 
-# Cloning Repository
+## Cloning Repository
 
 Clone this repository to your `$HOME` directory
 
 ```zsh
 cd ~
-git clone --recurse-submodules https://github.com/phirrehan/dotfiles-termux.git
+git clone https://github.com/phirrehan/dotfiles-termux.git
 ```
 
-# Setting up Symlinks
+## Setting up Symlinks
 
 Use stow to create symbolic links from `$HOME/dotfiles-termux/` to `$HOME/` in exactly the same way as they appear in the dotfiles. e.g. `~/dotfiles-termux/.config/` will be symlinked to `~/.config`. Directories/Files like `.git` and `README.md` are ignored by stow
 
@@ -41,9 +59,9 @@ stow .
 
 > Warning: Make sure that `~/.local`, `~/.config`, and `~/.cache` directories exist before running stow. Otherwise, These directories themselves will become symlinks. This is undesirable and should be prevented.
 
-# Termux Setup
+## Termux Setup
 
-## Package Manager
+### Package Manager
 
 Using termux's package manager(apt, pkg) can be slow and monotonous for the eyes. `nala` is a wrapper for apt and this will be used throughout the documentation. Install nala like so:
 
@@ -62,7 +80,7 @@ As typing on phone can be tedious, it is recommended to make short aliases in `.
 
 > Note: $1 means the first argument of the alias. for examlple `s htop` means `nala search htop`
 
-## Clean Login
+### Clean Login
 
 To stop the text from appearing in termux startup, create a .hushlogin file at home directory.
 
@@ -70,7 +88,7 @@ To stop the text from appearing in termux startup, create a .hushlogin file at h
 touch ~/.hushlogin
 ```
 
-## Storage Setup
+### Storage Setup
 
 Setup phone storage in termux.
 
@@ -80,7 +98,7 @@ termux-setup-storage
 
 This creates a `./storage` directory. It contains symlinks to phone's internal storage's important directories like downloads, dcim, movies, music, pictures, and lastly shared.
 
-## Termux:API
+### Termux:API
 
 Most of the useful scripts use a termux package called `Termux:API`. Install this using nala for a funtional experience.
 
@@ -90,7 +108,7 @@ nala update && nala install termux-api
 
 Take a look at the [official documentation](https://wiki.termux.com/wiki/Termux:API) of `Termux:API` for a list of things this package can do.
 
-## Termux:Widget
+### Termux:Widget
 
 To add a widget of termux in phone's launcher, install `Termux:Widget` from F-droid. It displays a list of scripts stored in `~/.shortcuts` which can be run with the press of a button. Copy `~/dotfiles-termux/.local/bin/` over to home directory.
 
@@ -104,7 +122,7 @@ cp -r ~/dotfiles-termux/.local/bin/ ~/.shortcuts
 
 Termux-tasker is yet another plugin which connects termux with a third-party tasker app. This can be the infamous tasker or some other application like MacroDroid. It can be very useful for automation.
 
-# Setting a Nerd Font
+## Setting a Nerd Font
 
 This font is useful for nvim and tmux configurations. If you do not need those, you can skip this step. Install a nerd font of your choice. I personally like to use `JetBrainsMono` Nerd font.
 
@@ -116,9 +134,9 @@ rm -rf JetBrainsMono
 rm JetBrainsMono.zip
 ```
 
-# Zsh Setup
+## Zsh Setup
 
-## Change Shell to Zsh
+### Change Shell to Zsh
 
 Change your default shell to zsh by using:
 
@@ -126,7 +144,7 @@ Change your default shell to zsh by using:
 chsh -s $(which zsh)
 ```
 
-## Setup Zinit
+### Setup Zinit
 
 Use the following command to source .zshrc file
 
@@ -136,7 +154,7 @@ exec ~/.zshrc
 
 This will install zinit(plugin manager for zsh) which will further install various plugins. This may take time on the first source or new zsh session. After all the installations, the zsh configurations will be setup.
 
-# Tmux Setup
+## Tmux Setup
 
 While inside a tmux environment, run the following command
 
@@ -148,7 +166,7 @@ Press `prefix` + <kbd>I</kbd> (capital i, as in **I**nstall) to fetch the plugin
 
 > Prefix has been changed to `Ctrl` + <kbd>space</kbd> in `tmux.conf`
 
-# Neovim Setup
+## Neovim Setup
 
 Ensure you have the following packages installed before running runing Neovim for the first time:
 
@@ -166,7 +184,7 @@ nala install 7zip unrar unzip python golang rust nodejs
 
 Neovim will lazy load everything when it is opened for the first time. It may take some time on the first launch.
 
-# Scripts
+## Scripts
 
 All the scripts are located in `~/.local/bin` which is added to PATH environment variable in `.zprofile`. Thus, writing the full path of a script in this directory is not needed. For example, for executing `~/.local/bin/run` the path can be omitted and be directly written as `run`.
 
