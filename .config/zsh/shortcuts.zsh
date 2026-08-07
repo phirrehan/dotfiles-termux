@@ -1,17 +1,16 @@
 # ======= Bookmark Useful Directories =======
-hash -d d=~/Downloads
-hash -d doc=~/Documents
-hash -d p=~/Pictures
-hash -d v=~/Videos
-hash -d mega=~/MEGA
-hash -d m=~/Music
+setopt CDABLEVARS
+
+hash -d dl=~/files/storage/downloads
+hash -d pic=~/files/storage/pictures
+hash -d dcim=~/files/storage/dcim
+hash -d mov=~/files/storage/movies
+hash -d mus=~/files/storage/music
 
 hash -d z=~/.config/zsh
 hash -d dot=~/dotfiles-termux
 hash -d sc=~/.local/bin
-hash -d cae=~/.config/caelestia
-hash -d hy=~/.config/hypr
 
 hash -d github=~/files/github
 hash -d notes=~/files/notes
-hash -d uni=~/files/Comsats
+hash -d uni=~/files/comsats

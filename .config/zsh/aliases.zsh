@@ -1,6 +1,6 @@
 # System
-alias ls="ls --color=auto"
-alias Ls="ls -A --color=auto"
+alias ls="eza --icons --group-directories-first"
+alias Ls="eza -A --icons --group-directories-first"
 alias grep="grep --color=auto"
 alias c="clear"
 

@@ -36,7 +36,7 @@ autoload -Uz compinit && compinit
 zinit cdreplay -q
 
 # Enable colors and change prompt:
-PS1="%B%{$fg[red]%}[%{$fg[yellow]%}%n%{$fg[green]%}@%{$fg[blue]%}%M %{$fg[magenta]%}%~%{$fg[red]%}]%{$reset_color%}$%b "
+PS1="%B% %{$fg[yellow]%}%~%{$reset_color%} ◎%b "
  
 # Completion styling
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
