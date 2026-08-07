@@ -6,4 +6,4 @@ source "$HOME/.config/zsh/misc.zsh"
 source "$HOME/.config/zsh/zinit.zsh"
 
 # ======= Greeting =======
-$HOME/.local/bin/greeting
+$HOME/.local/bin/greeting.sh
