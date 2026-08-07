@@ -1,16 +1,7 @@
 # Zinint
 
-# Set the directory to store Zinit and Plugins
-ZINIT_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}/zinit/zinit.git"
-
-# Download Zinit, if it's not there yet
-if [ ! -d "$ZINIT_HOME" ]; then 
-  mkdir -p "$(dirname $ZINIT_HOME)"
-  git clone https://github.com/zdharma-continuum/zinit.git "$ZINIT_HOME"
-fi
-
 # Source Zinit
-source "${ZINIT_HOME}/zinit.zsh"
+source "$HOME/.local/share/zinit/zinit.git"
 
 # Add in Zsh Plugins
 zinit light zsh-users/zsh-syntax-highlighting
