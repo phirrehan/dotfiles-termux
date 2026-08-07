@@ -1,8 +1,4 @@
 # ======= Functions =======
-function docker-reload() {
-  docker compose down --rmi local && docker compose up
-}
-
 function nalaf() {
   apt-cache pkgnames | \
   fzf --prompt '󰮯 ' --height=40% --layout=reverse --multi --preview 'nala show {1}' \
