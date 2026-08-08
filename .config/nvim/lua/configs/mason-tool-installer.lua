@@ -7,10 +7,11 @@ require("mason-tool-installer").setup {
     "clang-format",
     "css-lsp",
     "gofumpt",
-    "gopls",
     "goimports",
     "goimports-reviser",
+    "gopls",
     "html-lsp",
+    "jdtls",
     "json-lsp",
     "prettier",
     "prettierd",
@@ -21,7 +22,6 @@ require("mason-tool-installer").setup {
     "tailwindcss-language-server",
     "templ",
     "typescript-language-server",
-    "jdtls",
   },
 
   -- if set to true this will check each tool for updates. If updates

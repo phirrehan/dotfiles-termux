@@ -12,6 +12,7 @@ require("conform").setup {
     cpp = { "clang-format" },
     bash = { "shfmt" },
     sh = { "shfmt" },
+    lua = { "stylua" },
     go = { "goimports", "gofumpt", "goimports-reviser" },
     python = { "black" },
     javascript = { "prettier", "prettierd" },

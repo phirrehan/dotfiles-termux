@@ -23,9 +23,6 @@ return {
   },
   {
     "nvim-treesitter/nvim-treesitter",
-    config = function()
-      require "configs.treesitter"
-    end,
   },
   {
     "nvim-tree/nvim-tree.lua",
@@ -91,10 +88,6 @@ return {
         -- Configuration here, or leave empty to use defaults
       }
     end,
-  },
-  {
-    "github/copilot.vim",
-    cmd = { "Copilot" },
   },
   {
     "ray-x/web-tools.nvim",
