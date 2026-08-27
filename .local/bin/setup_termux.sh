@@ -105,7 +105,7 @@ install_nerd_font() {
 }
 
 install_arch() {
-  local arch_root="$PREFIX/var/lib/proot-distro/installed-rootfs/archlinux"
+  local arch_root="$PREFIX/var/lib/proot-distro/containers/archlinuxarm/rootfs"
 
   if [ -d "$arch_root" ]; then
     echo "    Arch Linux rootfs already exists, skipping"
