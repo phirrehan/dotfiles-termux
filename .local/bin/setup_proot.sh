@@ -161,7 +161,7 @@ EOF
 
 install_packages() {
   pacman -S --needed \
-    git stow sudo \
+    base-devel git stow sudo \
     eza zsh figlet curl \
     neovim ttf-jetbrains-mono-nerd fastfetch tmux yazi \
     fzf fd ffmpeg pdftk pdfgrep \

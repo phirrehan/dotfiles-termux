@@ -3,14 +3,13 @@ alias ls="eza --icons --group-directories-first"
 alias Ls="eza -A --icons --group-directories-first"
 alias grep="grep --color=auto"
 alias c="clear"
-alias login="proot-distro login --user rehan archlinuxarm --shared-tmp"
 
 # Package Management
 alias u="nala update && nala upgrade"
 
 # Zsh Config
 alias svim="sudo -E nvim"
-alias sz="source ~/.zshrc"
+alias sz="source ~/.config/zsh/.zshrc"
 
 
 # Global Aliases
