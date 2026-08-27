@@ -4,17 +4,23 @@
 #
 # Configure Arch Linux running inside Termux/proot-distro.
 #
-# This script is intended to be executed INSIDE Arch Linux.
+# Responsibilities:
+#   - Configure pacman for proot
+#   - Install CLI packages
+#   - Install XFCE
+#   - Install X11/desktop dependencies
+#   - Stow dotfiles
+#   - Install/configure zinit + zsh
+#   - Install/configure tmux + TPM
+#   - Provision Neovim
+#   - Configure Yazi
 #
-# It can also be run directly:
+# Normally invoked by setup_termux.sh.
+#
+# Can also be run manually from inside Arch:
 #
 #   ./scripts/setup_proot.sh
 #
-# The dotfiles repository is expected to be accessible through:
-#
-#   $DOTFILES_REPO_DIR
-#
-# When invoked by setup_termux.sh, this variable is set automatically.
 
 set +e
 
@@ -32,12 +38,33 @@ step() {
     printf '    ok: %s\n' "$label"
   else
     local rc=$?
-    printf '    WARN: %s failed (exit %d), continuing\n' "$label" "$rc" >&2
+    printf '    WARN: %s failed (exit %d), continuing\n' \
+      "$label" "$rc" >&2
   fi
 }
 
 ########################
-#### Package setup #####
+#### Pacman ############
+########################
+
+configure_pacman() {
+  #
+  # PRoot cannot provide all Linux namespace/sandbox functionality.
+  # Disable pacman's sandbox so package installation works reliably.
+  #
+
+  if grep -qE '^[[:space:]]*DisableSandbox[[:space:]]*$' \
+    /etc/pacman.conf; then
+
+    echo "    pacman sandbox already disabled"
+    return 0
+  fi
+
+  printf '\nDisableSandbox\n' >>/etc/pacman.conf
+}
+
+########################
+#### Packages ##########
 ########################
 
 install_packages() {
@@ -67,6 +94,22 @@ install_packages() {
     npm
 }
 
+install_xfce() {
+  #
+  # Termux:X11 is the actual X server.
+  # We therefore do NOT install a traditional Xorg server.
+  #
+  # dbus is required for a proper XFCE desktop session.
+  #
+
+  pacman -S --needed --noconfirm \
+    xfce4 \
+    xfce4-goodies \
+    dbus \
+    xorg-xinit \
+    xorg-xauth
+}
+
 ########################
 #### Dotfiles ##########
 ########################
@@ -77,10 +120,8 @@ get_repo_dir() {
     return 0
   fi
 
-  #
-  # If the script is run directly from the repository, resolve it normally.
-  #
   local script_dir
+
   script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
   printf '%s\n' "$(dirname -- "$script_dir")"
@@ -193,6 +234,42 @@ EOF
 }
 
 ########################
+#### XFCE ##############
+########################
+
+setup_xfce_environment() {
+  local env_dir="$HOME/.config/environment.d"
+
+  mkdir -p "$env_dir"
+
+  cat >"$env_dir/xfce.conf" <<'EOF'
+DISPLAY=:0
+PULSE_SERVER=127.0.0.1
+XDG_RUNTIME_DIR=/tmp
+LIBGL_ALWAYS_SOFTWARE=1
+EOF
+}
+
+setup_xfce_launcher() {
+  local bin_dir="$HOME/.local/bin"
+
+  mkdir -p "$bin_dir"
+
+  cat >"$bin_dir/xfce-session" <<'EOF'
+#!/usr/bin/env bash
+
+export DISPLAY="${DISPLAY:-:0}"
+export PULSE_SERVER="${PULSE_SERVER:-127.0.0.1}"
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/tmp}"
+export LIBGL_ALWAYS_SOFTWARE="${LIBGL_ALWAYS_SOFTWARE:-1}"
+
+exec dbus-run-session startxfce4
+EOF
+
+  chmod +x "$bin_dir/xfce-session"
+}
+
+########################
 #### Main ##############
 ########################
 
@@ -204,13 +281,19 @@ echo "home:     $HOME"
 
 if [ ! -f "$REPO_DIR/scripts/setup_proot.sh" ]; then
   echo
-  echo "ERROR: Cannot find repository:"
-  echo "       $REPO_DIR"
+  echo "ERROR: Cannot find setup_proot.sh:"
+  echo "       $REPO_DIR/scripts/setup_proot.sh"
   exit 1
 fi
 
+step "Configure pacman for proot" \
+  configure_pacman
+
 step "Install Arch packages" \
   install_packages
+
+step "Install XFCE + X11 dependencies" \
+  install_xfce
 
 step "Stow dotfiles into $HOME" \
   stow_dotfiles "$REPO_DIR"
@@ -233,6 +316,12 @@ step "neovim: MasonToolsInstall" \
 step "neovim: TSInstallSync all" \
   nvim_treesitter_install
 
+step "Configure XFCE environment" \
+  setup_xfce_environment
+
+step "Create XFCE session launcher" \
+  setup_xfce_launcher
+
 step "Install Yazi catppuccin theme" \
   setup_yazi_theme
 
@@ -242,17 +331,18 @@ cat <<'EOF'
  Arch setup complete
 ========================================
 
-To enter Arch:
+Enter Arch from Termux:
 
-  proot-distro login archlinux
+  proot-distro login archlinux --shared-tmp
 
-Inside Arch:
+Start XFCE:
 
-  exec zsh
-  tmux
+  xfce-session
+
+Or from Termux:
+
+  ./scripts/start_xfce.sh
 
 If any step logged a WARN above, fix the
-problem and run:
-
-  ./scripts/setup_proot.sh
+problem and run setup_proot.sh again.
 EOF

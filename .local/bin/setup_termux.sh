@@ -2,22 +2,33 @@
 #
 # setup_termux.sh
 #
-# Bootstrap Termux and install/configure an Arch Linux proot environment.
+# Bootstrap the Termux host and install Arch Linux ARM through proot-distro.
 #
-# Run this from the root of the dotfiles repository:
+# Responsibilities:
+#   - Install Termux packages
+#   - Install/configure Termux:X11
+#   - Install PulseAudio
+#   - Configure Termux storage
+#   - Configure Termux widgets
+#   - Install JetBrainsMono Nerd Font
+#   - Install Arch Linux ARM
+#   - Run setup_proot.sh inside Arch
+#
+# Run from the repository root:
 #
 #   ./scripts/setup_termux.sh
 #
-# This script is responsible ONLY for the Termux host.
+# The Termux:X11 Android application must be installed separately.
+# The companion Termux package is installed by this script.
 #
-# Arch-specific configuration is handled by:
-#
-#   ./scripts/setup_proot.sh
-#
-# The repository remains on the Termux filesystem and is accessible
-# from inside the Arch proot environment.
 
 set +e
+
+########################
+#### Configuration #####
+########################
+
+ARCH_NAME="archlinux"
 
 ########################
 #### Helpers ###########
@@ -33,12 +44,13 @@ step() {
     printf '    ok: %s\n' "$label"
   else
     local rc=$?
-    printf '    WARN: %s failed (exit %d), continuing\n' "$label" "$rc" >&2
+    printf '    WARN: %s failed (exit %d), continuing\n' \
+      "$label" "$rc" >&2
   fi
 }
 
 ########################
-#### Termux setup ######
+#### Termux packages ###
 ########################
 
 install_termux_packages() {
@@ -50,7 +62,18 @@ install_termux_packages() {
     curl \
     unzip \
     termux-api
+
+  # Termux:X11 repository and companion package.
+  pkg install -y x11-repo
+  pkg install -y termux-x11-nightly
+
+  # Audio server used by applications running inside Arch/XFCE.
+  pkg install -y pulseaudio
 }
+
+########################
+#### Termux settings ###
+########################
 
 setup_hushlogin() {
   touch "$HOME/.hushlogin"
@@ -66,13 +89,14 @@ setup_storage() {
 }
 
 setup_widgets() {
-  local source="$HOME/.local/bin"
+  local source="$HOME/dotfiles-termux/.local/bin"
   local target="$HOME/.shortcuts"
 
   mkdir -p "$target"
 
   if [ ! -d "$source" ]; then
-    echo "    $source not found, skipping widget setup"
+    echo "    widget source not found: $source"
+    echo "    skipping widget setup"
     return 1
   fi
 
@@ -81,6 +105,7 @@ setup_widgets() {
 
 setup_font() {
   local tmp_dir
+
   tmp_dir="$(mktemp -d)"
 
   echo "    downloading JetBrainsMono Nerd Font"
@@ -88,6 +113,7 @@ setup_font() {
   if ! curl -fL \
     "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip" \
     -o "$tmp_dir/JetBrainsMono.zip"; then
+
     rm -rf "$tmp_dir"
     return 1
   fi
@@ -95,6 +121,7 @@ setup_font() {
   if ! unzip -q \
     "$tmp_dir/JetBrainsMono.zip" \
     -d "$tmp_dir/JetBrainsMono"; then
+
     rm -rf "$tmp_dir"
     return 1
   fi
@@ -116,24 +143,33 @@ setup_termux() {
 }
 
 ########################
-#### Arch / proot ######
+#### Arch installation #
 ########################
 
+arch_installed() {
+  proot-distro login "$ARCH_NAME" -- true >/dev/null 2>&1
+}
+
 install_arch() {
-  if proot-distro list 2>/dev/null | grep -q '^archlinux.*Installed'; then
+  if arch_installed; then
     echo "    Arch Linux already installed, skipping"
     return 0
   fi
 
-  proot-distro install archlinux
+  proot-distro install danhunsaker/archlinuxarm
 }
+
+########################
+#### Arch setup ########
+########################
 
 run_proot_setup() {
   local repo_dir="$1"
+  local setup_script="$repo_dir/scripts/setup_proot.sh"
 
-  if [ ! -f "$repo_dir/scripts/setup_proot.sh" ]; then
+  if [ ! -f "$setup_script" ]; then
     echo "    setup_proot.sh not found:"
-    echo "    $repo_dir/scripts/setup_proot.sh"
+    echo "    $setup_script"
     return 1
   fi
 
@@ -142,11 +178,21 @@ run_proot_setup() {
   echo " Entering Arch Linux"
   echo "========================================"
 
-  proot-distro login archlinux -- \
-    env DOTFILES_REPO_DIR="$repo_dir" \
+  #
+  # --shared-tmp is required so that Arch can access
+  # the Termux:X11 socket and PulseAudio runtime.
+  #
+
+  proot-distro login "$ARCH_NAME" \
+    --shared-tmp \
+    -- \
+    env \
+    DOTFILES_REPO_DIR="$repo_dir" \
+    DISPLAY=":0" \
+    PULSE_SERVER="127.0.0.1" \
     bash -lc '
-      bash "$DOTFILES_REPO_DIR/scripts/setup_proot.sh"
-    '
+                bash "$DOTFILES_REPO_DIR/scripts/setup_proot.sh"
+            '
 }
 
 ########################
@@ -168,13 +214,13 @@ step "Configure Termux" \
 step "Install Arch Linux" \
   install_arch
 
-if proot-distro list 2>/dev/null | grep -q '^archlinux.*Installed'; then
+if arch_installed; then
   step "Configure Arch Linux" \
     run_proot_setup "$REPO_DIR"
 else
   echo
   echo "WARN: Arch Linux does not appear to be installed."
-  echo "      Run this script again after fixing the installation."
+  echo "      Run setup_termux.sh again after fixing the problem."
 fi
 
 cat <<'EOF'
@@ -183,15 +229,14 @@ cat <<'EOF'
  Termux setup complete
 ========================================
 
-You can enter Arch manually with:
+Enter Arch manually:
 
-  proot-distro login archlinux
+  proot-distro login archlinux --shared-tmp
 
-Or re-run:
+Start XFCE:
 
-  ./scripts/setup_termux.sh
+  ./scripts/start_xfce.sh
 
-The Arch-specific setup is handled by:
-
-  ./scripts/setup_proot.sh
+If any step logged a WARN above, fix the
+problem and run setup_termux.sh again.
 EOF
