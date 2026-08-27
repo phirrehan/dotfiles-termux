@@ -1,193 +1,308 @@
 # My Termux Dotfiles
 
-This repo is a fork of my `dotfiles` repo. It is made specifically for termux environment. Previously, both of them had a singluar repo. I have seperated them now because there were many conflicts and ambiguities in it.
+This repository is a fork of my [`dotfiles`](https://github.com/phirrehan/dotfiles) repository, specifically designed for **Termux on Android**.
 
-> Note: This repo is for android terminal `termux`. If you want x86_64 architecture check the [dotfiles](https://github.com/phirrehan/dotfiles) repo instead.
+Previously, both environments shared a single repository. I separated them because the two environments had different requirements, which resulted in conflicts and ambiguities.
 
-These dotfiles contains configurations for `zsh`, `neovim`, `yazi` and `tmux`.
+> **Note:** This repository is intended for **ARM-based Android devices running Termux**. If you want the regular x86_64 Arch Linux environment, see the [dotfiles](https://github.com/phirrehan/dotfiles) repository instead.
 
-# Quick Setup
+These dotfiles contain configurations for:
 
-Clone the repo into your home directory and run the bootstrap script:
+- `zsh`
+- `neovim`
+- `yazi`
+- `tmux`
+- `XFCE`
 
-```
+The setup uses:
+
+- **Termux** as the Android host environment
+- **proot-distro**
+- **Arch Linux ARM**
+- **Termux:X11**
+- **PulseAudio**
+- **XFCE**
+
+The goal is to have a complete Arch Linux development environment running on Android while retaining access to Termux-specific functionality such as `Termux:API`, `Termux:Widget`, phone storage, and Termux:X11.
+
+---
+
+# Before Starting
+
+## Install Termux
+
+Install Termux from a supported source.
+
+Do not mix Termux installations from different sources when using Termux plugins. Plugins such as Termux:X11, Termux:API and Termux:Widget need to be compatible with the installed Termux application.
+
+---
+
+## Install Termux:X11
+
+Termux:X11 consists of two parts:
+
+1. The Android application
+2. The Termux companion package
+
+Both are required.
+
+Download and install the **Termux:X11 Android APK** from the official [Termux:X11 releases](https://github.com/termux/termux-x11/releases).
+
+The setup script installs the Termux-side companion package automatically.
+
+> **Note:** Termux:X11 requires Android 8 or newer.
+
+See the official [Termux:X11 documentation](https://github.com/termux/termux-x11) for additional information and troubleshooting.
+
+---
+
+## Install Termux:API
+
+Install the **Termux:API Android plugin** from the same compatible source as your Termux installation.
+
+The Termux-side package is installed automatically by `setup_termux.sh`.
+
+---
+
+## Install Termux:Widget
+
+If you want to use Termux widgets, install the **Termux:Widget Android plugin** from the same compatible source as your Termux installation.
+
+---
+
+# Setup Guide
+
+Clone the repository into your Termux home directory:
+
+```zsh
 cd ~
 git clone https://github.com/phirrehan/dotfiles-termux.git
-cd ./dotfiles-termux
-./.local/bin/setup_system.sh
+cd ~/dotfiles-termux
 ```
 
-`setup_system` installs all dependencies, stows the configs into `$HOME`, sets up
-zsh (zinit), tmux (tpm + plugins) and neovim (lazy + mason + treesitter, headless).
-Each step is independent — a failure logs a warning and the rest still run, so it
-is safe to re-run.
+Run the Termux setup:
 
-# Manual Setup
+```zsh
+./.local/bin/setup_termux.sh
+```
 
-Ensure you have git and stow installed:
+The Termux setup is responsible for configuring the Android/Termux side of the environment and installing Arch Linux ARM.
+
+Arch Linux is installed using:
+
+```zsh
+proot-distro install danhunsaker/archlinuxarm
+```
+
+The setup script also copies the Arch setup script into Termux's shared temporary directory:
+
+```text
+/tmp/setup_proot.sh
+```
+
+This allows the script to be accessed from inside the Arch proot environment.
+
+> **Important:** The Android Termux:X11 application must be installed manually before using the graphical desktop.
+
+After `setup_termux.sh` completes, continue with the [Arch Linux Setup](#arch-linux-setup).
+
+---
+
+# Arch Linux Setup
+
+The Arch environment is configured separately from Termux.
+
+After `setup_termux.sh` has finished, enter Arch as root:
+
+```zsh
+proot-distro login archlinux --shared-tmp
+```
+
+The `--shared-tmp` option is important because Termux:X11 uses a Unix socket located in Termux's temporary directory. Sharing `/tmp` makes that socket available inside the Arch environment.
+
+You should now see a root shell similar to:
+
+```text
+[root@localhost ~]#
+```
+
+The Termux setup has already copied `setup_proot.sh` into:
+
+```text
+/tmp/setup_proot.sh
+```
+
+Copy it into the root user's home directory:
+
+```zsh
+cp /tmp/setup_proot.sh /root/setup_proot.sh
+```
+
+Make it executable:
+
+```zsh
+chmod +x /root/setup_proot.sh
+```
+
+Then run it:
+
+```zsh
+/root/setup_proot.sh
+```
+
+Alternatively:
+
+```zsh
+bash /root/setup_proot.sh
+```
+
+---
+
+# Entering Arch as the Normal User
+
+After `setup_proot.sh` has completed, exit the root Arch environment:
+
+```zsh
+exit
+```
+
+Then enter Arch using the newly-created user:
+
+```zsh
+proot-distro login archlinux --user <username> --shared-tmp
+```
+
+You can now use Arch normally without logging in as root.
+
+---
+
+# Dotfiles
+
+The Termux and Arch environments contain **separate clones** of this repository.
+
+The Termux copy:
+
+```text
+~/dotfiles-termux
+```
+
+The Arch copy:
+
+```text
+/home/<username>/dotfiles-termux
+```
+
+These are independent Git repositories.
+
+This is intentional.
+
+Termux-specific configuration belongs to the Termux environment, while the normal shell, editor, terminal multiplexer, file manager, and desktop configuration is used inside Arch.
+
+The automated setup performs this automatically.
+
+---
+
+# Termux Setup
+
+## Package Manager
+
+Termux uses `apt`/`pkg` for package management.
+
+Install `nala`, a clean wrapper for apt:
 
 ```zsh
 apt update
-apt install git stow --needed
+apt install nala
 ```
 
-Install these applications for using my dotfiles:
+The setup scripts use `pkg` rather than `nala`.
+
+Some useful aliases are defined in:
+
+```text
+~/dotfiles-termux/.config/zsh/aliases.zsh
+```
+
+Take a look at the aliases before using them.
+
+---
+
+# Termux:X11 + XFCE
+
+The graphical environment uses:
+
+```text
+Android
+│
+└── Termux
+    │
+    ├── Termux:X11
+    │
+    ├── PulseAudio
+    │
+    └── proot-distro
+        │
+        └── Arch Linux ARM
+            │
+            └── XFCE
+```
+
+Termux:X11 provides the X server on Android while XFCE runs inside Arch Linux.
+
+---
+
+# PulseAudio
+
+PulseAudio runs on the Termux host.
+
+It provides audio support for applications running inside the Arch environment.
+
+The XFCE startup script starts PulseAudio before launching the graphical session.
+
+---
+
+# Starting XFCE
+
+Once the Arch setup is complete, XFCE can be started from Termux with:
 
 ```zsh
-apt install zsh fzf neovim tmux
+./.local/bin/start_xfce.sh
 ```
 
-## Cloning Repository
-
-Clone this repository to your `$HOME` directory
+If `.local/bin` is in your `$PATH`, you can simply run:
 
 ```zsh
-cd ~
-git clone https://github.com/phirrehan/dotfiles-termux.git
+start_xfce.sh
 ```
 
-## Setting up Symlinks
+---
 
-Use stow to create symbolic links from `$HOME/dotfiles-termux/` to `$HOME/` in exactly the same way as they appear in the dotfiles. e.g. `~/dotfiles-termux/.config/` will be symlinked to `~/.config`. Directories/Files like `.git` and `README.md` are ignored by stow
+# Starting Arch Manually
 
-> Note: Any config files that conflict with the configurations of these `dotfiles`, should be backed up and removed to avoid errors.
+To enter Arch without starting XFCE:
 
 ```zsh
-cd dotfiles-termux
-stow .
+proot-distro login archlinux --user <username> --shared-tmp
 ```
 
-> Warning: Make sure that `~/.local`, `~/.config`, and `~/.cache` directories exist before running stow. Otherwise, These directories themselves will become symlinks. This is undesirable and should be prevented.
-
-## Termux Setup
-
-### Package Manager
-
-Using termux's package manager(apt, pkg) can be slow and monotonous for the eyes. `nala` is a wrapper for apt and this will be used throughout the documentation. Install nala like so:
+Set the display:
 
 ```zsh
-apt update && apt install nala
+export DISPLAY=:0
 ```
 
-As typing on phone can be tedious, it is recommended to make short aliases in `.zshrc`. I have made a few important aliases which can be found in `~/dotfiles-termux/.config/zsh/aliases.zsh` file. Be sure to take a look at them and not accidentally write a command. Some useful aliases are:
-
-| Alias | Function                       |
-| ----- | ------------------------------ |
-| nalaf | search and install a package   |
-| nalar | search and purge a package     |
-| u     | nala update && nala upgrade $1 |
-| c     | clear                          |
-
-> Note: $1 means the first argument of the alias. for examlple `s htop` means `nala search htop`
-
-### Clean Login
-
-To stop the text from appearing in termux startup, create a .hushlogin file at home directory.
+Then start XFCE:
 
 ```zsh
-touch ~/.hushlogin
+dbus-run-session startxfce4
 ```
 
-### Storage Setup
+PulseAudio should be running in the Termux host before starting applications that require audio.
 
-Setup phone storage in termux.
-
-```zsh
-termux-setup-storage
-```
-
-This creates a `./storage` directory. It contains symlinks to phone's internal storage's important directories like downloads, dcim, movies, music, pictures, and lastly shared.
-
-### Termux:API
-
-Most of the useful scripts use a termux package called `Termux:API`. Install this using nala for a funtional experience.
-
-```zsh
-nala update && nala install termux-api
-```
-
-Take a look at the [official documentation](https://wiki.termux.com/wiki/Termux:API) of `Termux:API` for a list of things this package can do.
-
-### Termux:Widget
-
-To add a widget of termux in phone's launcher, install `Termux:Widget` from F-droid. It displays a list of scripts stored in `~/.shortcuts` which can be run with the press of a button. Copy `~/dotfiles-termux/.local/bin/` over to home directory.
-
-> Note: symlink to home does not work.
-
-```zsh
-cp -r ~/dotfiles-termux/.local/bin/ ~/.shortcuts
-```
-
-## Termux:Tasker
-
-Termux-tasker is yet another plugin which connects termux with a third-party tasker app. This can be the infamous tasker or some other application like MacroDroid. It can be very useful for automation.
-
-## Setting a Nerd Font
-
-This font is useful for nvim and tmux configurations. If you do not need those, you can skip this step. Install a nerd font of your choice. I personally like to use `JetBrainsMono` Nerd font.
-
-```zsh
-curl -fLo JetBrainsMono.zip https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip
-unzip JetBrainsMono.zip -d JetBrainsMono
-cp JetBrainsMono/JetBrainsMonoNerdFont-Regular.ttf ~/.termux/font.ttf
-rm -rf JetBrainsMono
-rm JetBrainsMono.zip
-```
-
-## Zsh Setup
-
-### Change Shell to Zsh
-
-Change your default shell to zsh by using:
-
-```zsh
-chsh -s $(which zsh)
-```
-
-### Setup Zinit
-
-Use the following command to source .zshrc file
-
-```zsh
-exec ~/.zshrc
-```
-
-This will install zinit(plugin manager for zsh) which will further install various plugins. This may take time on the first source or new zsh session. After all the installations, the zsh configurations will be setup.
-
-## Tmux Setup
-
-While inside a tmux environment, run the following command
-
-```zsh
-tmux source ~/.config/tmux/tmux.conf
-```
-
-Press `prefix` + <kbd>I</kbd> (capital i, as in **I**nstall) to fetch the plugin
-
-> Prefix has been changed to `Ctrl` + <kbd>space</kbd> in `tmux.conf`
-
-## Neovim Setup
-
-Ensure you have the following packages installed before running runing Neovim for the first time:
-
-- 7zip
-- unrar
-- unzip
-- python
-- go
-- rust
-- nodejs
-
-```zsh
-nala install 7zip unrar unzip python golang rust nodejs
-```
-
-Neovim will lazy load everything when it is opened for the first time. It may take some time on the first launch.
-
-## Scripts
-
-All the scripts are located in `~/.local/bin` which is added to PATH environment variable in `.zprofile`. Thus, writing the full path of a script in this directory is not needed. For example, for executing `~/.local/bin/run` the path can be omitted and be directly written as `run`.
+---
 
 # Thank You
 
-These were most of the general configurations I use. Hope you liked them and have a good day!
+These are most of the general configurations I use on my Android/Termux setup.
+
+Hope you find them useful and have a good day!

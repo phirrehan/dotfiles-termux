@@ -1,308 +1,336 @@
 #!/usr/bin/env bash
 #
-# setup_proot.sh
+# setup_proot - bootstrap the Arch Linux ARM environment inside proot-distro.
 #
-# Configure Arch Linux running inside Termux/proot-distro.
+# This script is intended to be run as root inside Arch Linux ARM.
 #
-# Responsibilities:
-#   - Configure pacman for proot
-#   - Install CLI packages
-#   - Install XFCE
-#   - Install X11/desktop dependencies
-#   - Stow dotfiles
-#   - Install/configure zinit + zsh
-#   - Install/configure tmux + TPM
-#   - Provision Neovim
-#   - Configure Yazi
+# It:
+#   - configures the Arch Linux ARM mirrors
+#   - updates the system
+#   - installs required packages
+#   - creates a normal user
+#   - grants the user sudo privileges
+#   - clones and stows the dotfiles
+#   - sets up zsh, zinit, tmux, neovim, yazi and XFCE
 #
-# Normally invoked by setup_termux.sh.
+# The script is copied into Arch by setup_termux.sh:
 #
-# Can also be run manually from inside Arch:
+#   /tmp/setup_proot.sh
 #
-#   ./scripts/setup_proot.sh
+# Run from the Arch environment:
+#
+#   /tmp/setup_proot.sh
 #
 
 set +e
 
-########################
-#### Helpers ###########
-########################
+DOTFILES_REPO="https://github.com/phirrehan/dotfiles-termux.git"
+DOTFILES_DIR_NAME="dotfiles-termux"
 
+have() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+# step "Human label" cmd args...
+#
+# Run command and warn instead of aborting.
 step() {
   local label="$1"
   shift
 
   printf '\n==> %s\n' "$label"
 
-  if "$@"; then
+  "$@"
+  local status=$?
+
+  if [ "$status" -eq 0 ]; then
     printf '    ok: %s\n' "$label"
   else
-    local rc=$?
     printf '    WARN: %s failed (exit %d), continuing\n' \
-      "$label" "$rc" >&2
+      "$label" "$status" >&2
   fi
 }
 
-########################
-#### Pacman ############
-########################
+###############
+#### Steps ####
+###############
 
-configure_pacman() {
-  #
-  # PRoot cannot provide all Linux namespace/sandbox functionality.
-  # Disable pacman's sandbox so package installation works reliably.
-  #
+setup_mirrors() {
+  cat >/etc/pacman.d/mirrorlist <<'EOF'
+##
+## Arch Linux ARM repository mirrorlist
+##
 
-  if grep -qE '^[[:space:]]*DisableSandbox[[:space:]]*$' \
-    /etc/pacman.conf; then
+## Geo-IP based mirror selection and load balancing
+Server = http://mirror.archlinuxarm.org/$arch/$repo
 
-    echo "    pacman sandbox already disabled"
-    return 0
-  fi
+## Germany
+Server = http://de3.mirror.archlinuxarm.org/$arch/$repo
+Server = http://de.mirror.archlinuxarm.org/$arch/$repo
+Server = http://de4.mirror.archlinuxarm.org/$arch/$repo
 
-  printf '\nDisableSandbox\n' >>/etc/pacman.conf
+## Taiwan
+Server = http://tw2.mirror.archlinuxarm.org/$arch/$repo
+Server = http://tw.mirror.archlinuxarm.org/$arch/$repo
+
+## United States
+Server = http://ca.us.mirror.archlinuxarm.org/$arch/$repo
+Server = http://fl.us.mirror.archlinuxarm.org/$arch/$repo
+Server = http://nj.us.mirror.archlinuxarm.org/$arch/$repo
+EOF
 }
-
-########################
-#### Packages ##########
-########################
 
 install_packages() {
-  pacman -Syu --noconfirm
-
-  pacman -S --needed --noconfirm \
-    git \
-    stow \
-    zsh \
-    curl \
-    neovim \
-    fastfetch \
-    tmux \
-    yazi \
-    fzf \
-    fd \
-    ffmpeg \
-    pdftk \
-    pdfgrep \
-    7zip \
-    unrar \
-    unzip \
-    python \
-    go \
-    rust \
-    nodejs \
-    npm
-}
-
-install_xfce() {
-  #
-  # Termux:X11 is the actual X server.
-  # We therefore do NOT install a traditional Xorg server.
-  #
-  # dbus is required for a proper XFCE desktop session.
-  #
-
-  pacman -S --needed --noconfirm \
-    xfce4 \
-    xfce4-goodies \
+  pacman -S --needed \
+    git stow sudo \
+    zsh curl \
+    neovim fastfetch tmux yazi \
+    fzf fd ffmpeg pdftk pdfgrep \
+    7zip unrar unzip \
+    python go rust nodejs npm \
     dbus \
-    xorg-xinit \
-    xorg-xauth
+    xfce4 xfce4-goodies \
+    xorg-xinit xorg-xauth
 }
 
-########################
-#### Dotfiles ##########
-########################
+create_user() {
+  local username="${DOTFILES_USER:-}"
 
-get_repo_dir() {
-  if [ -n "${DOTFILES_REPO_DIR:-}" ]; then
-    printf '%s\n' "$DOTFILES_REPO_DIR"
-    return 0
+  if [ -z "$username" ]; then
+    read -rp "Enter the Arch username to create: " username
   fi
 
-  local script_dir
-
-  script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-
-  printf '%s\n' "$(dirname -- "$script_dir")"
-}
-
-stow_dotfiles() {
-  local repo_dir="$1"
-
-  if [ ! -d "$repo_dir" ]; then
-    echo "    repository not found: $repo_dir"
+  if [ -z "$username" ]; then
+    echo "    No username supplied"
     return 1
   fi
 
-  echo "    repository: $repo_dir"
-  echo "    target:     $HOME"
+  if ! [[ "$username" =~ ^[a-z_][a-z0-9_-]*$ ]]; then
+    echo "    Invalid username: $username"
+    return 1
+  fi
 
-  stow \
-    --restow \
-    --target="$HOME" \
-    --dir="$repo_dir" \
-    .
+  if id "$username" >/dev/null 2>&1; then
+    echo "    User '$username' already exists, skipping creation"
+  else
+    useradd \
+      --create-home \
+      --groups wheel \
+      --shell /bin/zsh \
+      "$username"
+
+    if [ $? -ne 0 ]; then
+      return 1
+    fi
+
+    echo "    User '$username' created"
+
+    echo
+    echo "Set the password for '$username':"
+    passwd "$username"
+
+    if [ $? -ne 0 ]; then
+      return 1
+    fi
+  fi
+
+  DOTFILES_USER="$username"
+  export DOTFILES_USER
 }
 
-########################
-#### zsh / zinit #######
-########################
+setup_sudo() {
+  local sudoers_file="/etc/sudoers.d/wheel"
+
+  cat >"$sudoers_file" <<'EOF'
+%wheel ALL=(ALL:ALL) ALL
+EOF
+
+  chmod 440 "$sudoers_file"
+
+  # Validate sudoers configuration.
+  visudo -cf /etc/sudoers
+
+  if [ $? -ne 0 ]; then
+    echo "    sudoers configuration is invalid"
+    rm -f "$sudoers_file"
+    return 1
+  fi
+
+  echo "    wheel group granted sudo privileges"
+}
+
+setup_dotfiles() {
+  local username="$DOTFILES_USER"
+  local user_home="/home/$username"
+  local repo_dir="$user_home/$DOTFILES_DIR_NAME"
+
+  if [ -d "$repo_dir/.git" ]; then
+    echo "    dotfiles repository already present, skipping clone"
+  else
+    if [ -e "$repo_dir" ]; then
+      echo "    $repo_dir exists but is not a git repository"
+      return 1
+    fi
+
+    sudo -u "$username" git clone \
+      "$DOTFILES_REPO" \
+      "$repo_dir"
+
+    if [ $? -ne 0 ]; then
+      return 1
+    fi
+  fi
+
+  chown -R "$username:$username" "$repo_dir"
+
+  sudo -u "$username" bash -c "
+    cd '$repo_dir' &&
+    stow --restow --target='$user_home' .
+  "
+}
 
 setup_zinit() {
-  local zinit_dir="$HOME/.local/share/zinit/zinit.git"
+  local username="$DOTFILES_USER"
+  local user_home="/home/$username"
+  local zinit_dir="$user_home/.local/share/zinit/zinit.git"
 
   if [ -d "$zinit_dir" ]; then
     echo "    zinit already present, skipping"
     return 0
   fi
 
-  mkdir -p "$(dirname "$zinit_dir")"
+  sudo -u "$username" mkdir -p \
+    "$user_home/.local/share/zinit"
 
-  git clone \
+  sudo -u "$username" git clone \
     https://github.com/zdharma-continuum/zinit.git \
     "$zinit_dir"
 }
 
-setup_default_shell() {
-  local zsh_path
-
-  zsh_path="$(command -v zsh)" || {
-    echo "    zsh not installed, skipping"
-    return 1
-  }
-
-  if [ "${SHELL:-}" = "$zsh_path" ]; then
-    echo "    default shell already zsh, skipping"
-    return 0
-  fi
-
-  chsh -s "$zsh_path"
-}
-
-########################
-#### tmux / TPM ########
-########################
-
 setup_tpm() {
-  local tpm_dir="$HOME/.config/tmux/plugins/tpm"
+  local username="$DOTFILES_USER"
+  local user_home="/home/$username"
+  local tpm_dir="$user_home/.config/tmux/plugins/tpm"
 
   if [ ! -d "$tpm_dir" ]; then
-    mkdir -p "$(dirname "$tpm_dir")"
+    sudo -u "$username" mkdir -p \
+      "$user_home/.config/tmux/plugins"
 
-    git clone \
+    sudo -u "$username" git clone \
       https://github.com/tmux-plugins/tpm \
-      "$tpm_dir" || return 1
+      "$tpm_dir"
   else
     echo "    tpm already present, skipping clone"
   fi
 
-  "$tpm_dir/bin/install_plugins"
+  if [ -x "$tpm_dir/bin/install_plugins" ]; then
+    sudo -u "$username" \
+      "$tpm_dir/bin/install_plugins"
+  else
+    echo "    TPM install script not found"
+    return 1
+  fi
 }
 
-########################
-#### Neovim ############
-########################
-
 nvim_lazy_sync() {
-  nvim --headless "+Lazy! sync" +qa
+  sudo -u "$DOTFILES_USER" \
+    env HOME="/home/$DOTFILES_USER" \
+    nvim --headless "+Lazy! sync" +qa
 }
 
 nvim_mason_install() {
-  nvim --headless \
+  sudo -u "$DOTFILES_USER" \
+    env HOME="/home/$DOTFILES_USER" \
+    nvim --headless \
     -c "autocmd User MasonToolsUpdateCompleted quitall" \
     -c "MasonToolsInstall"
 }
 
 nvim_treesitter_install() {
-  nvim --headless "+TSInstallSync all" +qa
+  sudo -u "$DOTFILES_USER" \
+    env HOME="/home/$DOTFILES_USER" \
+    nvim --headless "+TSInstallSync all" +qa
 }
 
-########################
-#### Yazi ##############
-########################
-
 setup_yazi_theme() {
-  ya pkg add yazi-rs/flavors:catppuccin-mocha || return 1
+  local username="$DOTFILES_USER"
+  local user_home="/home/$username"
+  local yazi_dir="$user_home/.config/yazi"
 
-  mkdir -p "$HOME/.config/yazi"
+  sudo -u "$username" \
+    env HOME="$user_home" \
+    ya pkg add yazi-rs/flavors:catppuccin-mocha
 
-  cat >"$HOME/.config/yazi/theme.toml" <<'EOF'
+  if [ $? -ne 0 ]; then
+    return 1
+  fi
+
+  mkdir -p "$yazi_dir"
+
+  cat >"$yazi_dir/theme.toml" <<'EOF'
 [flavor]
 dark = "catppuccin-mocha"
 EOF
+
+  chown "$username:$username" \
+    "$yazi_dir/theme.toml"
 }
 
-########################
-#### XFCE ##############
-########################
+setup_xfce() {
+  local username="$DOTFILES_USER"
+  local user_home="/home/$username"
 
-setup_xfce_environment() {
-  local env_dir="$HOME/.config/environment.d"
+  cat >"$user_home/.xinitrc" <<'EOF'
+#!/bin/sh
 
-  mkdir -p "$env_dir"
+export DISPLAY=:0
 
-  cat >"$env_dir/xfce.conf" <<'EOF'
-DISPLAY=:0
-PULSE_SERVER=127.0.0.1
-XDG_RUNTIME_DIR=/tmp
-LIBGL_ALWAYS_SOFTWARE=1
-EOF
-}
-
-setup_xfce_launcher() {
-  local bin_dir="$HOME/.local/bin"
-
-  mkdir -p "$bin_dir"
-
-  cat >"$bin_dir/xfce-session" <<'EOF'
-#!/usr/bin/env bash
-
-export DISPLAY="${DISPLAY:-:0}"
-export PULSE_SERVER="${PULSE_SERVER:-127.0.0.1}"
-export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/tmp}"
-export LIBGL_ALWAYS_SOFTWARE="${LIBGL_ALWAYS_SOFTWARE:-1}"
+export XDG_CURRENT_DESKTOP=XFCE
+export XDG_SESSION_DESKTOP=xfce
+export XDG_CONFIG_DIRS=/etc/xdg/xdg-xfce:/etc/xdg
+export XDG_DATA_DIRS=/usr/local/share:/usr/share
 
 exec dbus-run-session startxfce4
 EOF
 
-  chmod +x "$bin_dir/xfce-session"
+  chmod +x "$user_home/.xinitrc"
+
+  chown \
+    "$username:$username" \
+    "$user_home/.xinitrc"
 }
 
-########################
-#### Main ##############
-########################
+###############
+###### Run ####
+###############
 
-REPO_DIR="$(get_repo_dir)"
+echo "Arch Linux ARM setup"
 
-echo "dotfiles: Arch/proot setup"
-echo "repo:     $REPO_DIR"
-echo "home:     $HOME"
-
-if [ ! -f "$REPO_DIR/scripts/setup_proot.sh" ]; then
-  echo
-  echo "ERROR: Cannot find setup_proot.sh:"
-  echo "       $REPO_DIR/scripts/setup_proot.sh"
+if [ "$(id -u)" -ne 0 ]; then
+  echo "ERROR: setup_proot.sh must be run as root."
   exit 1
 fi
 
-step "Configure pacman for proot" \
-  configure_pacman
+step "Configure Arch Linux ARM mirrors" \
+  setup_mirrors
+
+step "Update package database and system" \
+  pacman -Syu
 
 step "Install Arch packages" \
   install_packages
 
-step "Install XFCE + X11 dependencies" \
-  install_xfce
+step "Create normal Arch user" \
+  create_user
 
-step "Stow dotfiles into $HOME" \
-  stow_dotfiles "$REPO_DIR"
+step "Configure sudo privileges" \
+  setup_sudo
+
+step "Clone and stow dotfiles" \
+  setup_dotfiles
 
 step "Install zinit" \
   setup_zinit
-
-step "Set zsh as default shell" \
-  setup_default_shell
 
 step "Install tpm + tmux plugins" \
   setup_tpm
@@ -316,33 +344,28 @@ step "neovim: MasonToolsInstall" \
 step "neovim: TSInstallSync all" \
   nvim_treesitter_install
 
-step "Configure XFCE environment" \
-  setup_xfce_environment
-
-step "Create XFCE session launcher" \
-  setup_xfce_launcher
+step "Configure XFCE" \
+  setup_xfce
 
 step "Install Yazi catppuccin theme" \
   setup_yazi_theme
 
-cat <<'EOF'
+cat <<EOF
 
-========================================
- Arch setup complete
-========================================
+Setup complete.
 
-Enter Arch from Termux:
+Arch user:
+  $DOTFILES_USER
 
-  proot-distro login archlinux --shared-tmp
+Dotfiles:
+  /home/$DOTFILES_USER/$DOTFILES_DIR_NAME
 
-Start XFCE:
+Enter Arch as your normal user from Termux:
 
-  xfce-session
+  proot-distro login archlinux --user $DOTFILES_USER --shared-tmp
 
-Or from Termux:
+To start XFCE, exit Arch and run from Termux:
 
-  ./scripts/start_xfce.sh
+  ~/.local/bin/start_xfce.sh
 
-If any step logged a WARN above, fix the
-problem and run setup_proot.sh again.
 EOF
