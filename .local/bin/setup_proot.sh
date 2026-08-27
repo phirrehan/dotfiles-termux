@@ -194,7 +194,6 @@ create_user() {
   else
     useradd \
       --create-home \
-      --groups wheel \
       --shell /bin/zsh \
       "$username"
 
@@ -218,24 +217,23 @@ create_user() {
 }
 
 setup_sudo() {
-  local sudoers_file="/etc/sudoers.d/wheel"
+  local username="$DOTFILES_USER"
+  local sudoers_file="/etc/sudoers.d/$username"
 
-  cat >"$sudoers_file" <<'EOF'
-%wheel ALL=(ALL:ALL) ALL
+  cat >"$sudoers_file" <<EOF
+$username ALL=(ALL:ALL) ALL
 EOF
 
   chmod 440 "$sudoers_file"
 
   # Validate sudoers configuration.
-  visudo -cf /etc/sudoers
-
-  if [ $? -ne 0 ]; then
-    echo "    sudoers configuration is invalid"
+  if ! visudo -c; then
+    echo "    sudoers configuration is invalid" >&2
     rm -f "$sudoers_file"
     return 1
   fi
 
-  echo "    wheel group granted sudo privileges"
+  echo "    sudo privileges granted to '$username'"
 }
 
 setup_dotfiles() {
