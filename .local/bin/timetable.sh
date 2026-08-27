@@ -1,7 +1,8 @@
 #!/bin/bash
 
 ### Variables ###
-timetable_dir="$HOME/files/comsats/timetable"
+termux_prefix="/data/data/com.termux/files/home"
+timetable_dir="$termux_prefix/storage/downloads/timetable"
 old_pdf_name="$(ls $timetable_dir | grep -oP '.+-classes\.pdf')"
 base_url="https://lahore.comsats.edu.pk"
 search_url="$base_url/downloads.aspx"
