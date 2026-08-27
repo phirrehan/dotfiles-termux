@@ -80,6 +80,85 @@ Server = http://nj.us.mirror.archlinuxarm.org/$arch/$repo
 EOF
 }
 
+configure_pacman() {
+  local pacman_conf="/etc/pacman.conf"
+
+  cat >"$pacman_conf" <<'EOF'
+#
+# /etc/pacman.conf
+#
+# See the pacman.conf(5) manpage for option and repository directives
+#
+# GENERAL OPTIONS
+#
+[options]
+# The following paths are commented out with their default values listed.
+# If you wish to use different paths, uncomment and update the paths.
+#RootDir     = /
+#DBPath      = /var/lib/pacman/
+#CacheDir    = /var/cache/pacman/pkg/
+#LogFile     = /var/log/pacman.log
+#GPGDir      = /etc/pacman.d/gnupg/
+#HookDir     = /etc/pacman.d/hooks/
+HoldPkg     = pacman glibc
+#XferCommand = /usr/bin/curl -L -C - -f -o %o %u
+#XferCommand = /usr/bin/wget --passive-ftp -c -O %o %u
+#CleanMethod = KeepInstalled
+Architecture = aarch64
+
+# Pacman won't upgrade packages listed in IgnorePkg and members of IgnoreGroup
+#IgnorePkg   =
+#IgnoreGroup =
+
+#NoUpgrade   =
+#NoExtract   =
+
+# Misc options
+#UseSyslog
+ILoveCandy
+Color
+#NoProgressBar
+CheckSpace
+#VerbosePkgLists
+ParallelDownloads = 5
+DownloadUser = alpm
+DisableSandboxFilesystem
+#DisableSandboxSyscalls
+
+# By default, pacman accepts packages signed by keys that its local keyring
+# trusts (see pacman-key and its man page), as well as unsigned packages.
+SigLevel    = Required DatabaseOptional
+LocalFileSigLevel = Optional
+#RemoteFileSigLevel = Required
+
+# NOTE: You must run `pacman-key --init` before first using pacman; the local
+# keyring can then be populated with the keys of all official Arch Linux ARM
+# packagers with `pacman-key --populate archlinuxarm`.
+
+#
+# REPOSITORIES
+#
+[core]
+Include = /etc/pacman.d/mirrorlist
+
+[extra]
+Include = /etc/pacman.d/mirrorlist
+
+[alarm]
+Include = /etc/pacman.d/mirrorlist
+
+[aur]
+Include = /etc/pacman.d/mirrorlist
+
+# An example of a custom package repository.
+#[custom]
+#SigLevel = Optional TrustAll
+#Server = file:///home/custompkgs
+EOF
+
+  echo "    pacman.conf configured"
+}
+
 install_packages() {
   pacman -S --needed \
     git stow sudo \
@@ -313,6 +392,8 @@ fi
 
 step "Configure Arch Linux ARM mirrors" \
   setup_mirrors
+
+step "Configure pacman" configure_pacman
 
 step "Update package database and system" \
   pacman -Syu

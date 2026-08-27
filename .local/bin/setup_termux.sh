@@ -118,7 +118,7 @@ install_arch() {
 copy_proot_setup_script() {
   local script="$REPO_DIR/.local/bin/setup_proot.sh"
   local arch_root="$PREFIX/var/lib/proot-distro/containers/archlinuxarm/rootfs"
-  local target="$arch_root/tmp/setup_proot.sh"
+  local target="$arch_root/root/setup_proot.sh"
 
   if [ ! -f "$script" ]; then
     echo "    setup_proot.sh not found: $script"
@@ -161,7 +161,7 @@ Next:
 
   2. Run the Arch setup:
 
-       /tmp/setup_proot.sh
+       ./setup_proot.sh
 
   3. After setup_proot.sh creates your normal user, exit Arch:
 
@@ -169,7 +169,7 @@ Next:
 
   4. Log back into Arch as your normal user:
 
-       proot-distro login archlinux --user <username> --shared-tmp
+       proot-distro login archlinuxarm --user <username> --shared-tmp
 
   5. To start XFCE:
 
