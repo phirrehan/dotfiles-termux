@@ -117,7 +117,7 @@ install_arch() {
 
 copy_proot_setup_script() {
   local script="$REPO_DIR/.local/bin/setup_proot.sh"
-  local arch_root="$PREFIX/var/lib/proot-distro/installed-rootfs/archlinux"
+  local arch_root="$PREFIX/var/lib/proot-distro/containers/archlinuxarm/rootfs"
   local target="$arch_root/tmp/setup_proot.sh"
 
   if [ ! -f "$script" ]; then
@@ -157,7 +157,7 @@ Next:
 
   1. Enter Arch Linux:
 
-       proot-distro login archlinux --shared-tmp
+       proot-distro login archlinuxarm --shared-tmp
 
   2. Run the Arch setup:
 
