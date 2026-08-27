@@ -1,5 +1,4 @@
-#!/bin/sh
-
+#!/bin/bash
 
 ### Variables ###
 timetable_dir="$HOME/files/comsats/timetable"
@@ -35,7 +34,7 @@ check_deps() {
 }
 fetch_pdfname() {
   html=$(curl_chrome131_android -s "$search_url") &&
-   printf $(echo $html | grep -oE '[^/]+-classes\.pdf') ||
+    printf $(echo $html | grep -oE '[^/]+-classes\.pdf') ||
     echo "pdfname fetch failed :(" && exit 5
 }
 download_pdf() {
@@ -58,8 +57,8 @@ update_timetable() {
   }
   if [ -n "$old_pdf_name" ]; then
     if [ "$pdfname" = "$old_pdf_name" ]; then
-      echo "Timetable has not changed." 
-      exit 0 
+      echo "Timetable has not changed."
+      exit 0
     else
       echo "Timetable has updated."
       echo "deleteing old pdf: $old_pdf_name"
@@ -76,7 +75,7 @@ update_timetable() {
 
 ### Error Handeling ###
 ## check dependencies
-check_deps 
+check_deps
 ## check if timetable_dir exists and is a directory
 [ -d "$timetable_dir" ] || {
   echo "timetable_dir: $timetable_dir is not a valid directory."
@@ -85,11 +84,14 @@ check_deps
 
 ### Argument Handling ###
 case "$1" in
-  -h|--help) help ;;
-  get_pdfname) echo "$old_pdf_name";;
-  update)
-    pdfname=$(fetch_pdfname "$search_url")
-    update_timetable
-    ;;
-  *) echo "error: invalid argument. use -h or --help for usage."; exit 4 ;;
+-h | --help) help ;;
+get_pdfname) echo "$old_pdf_name" ;;
+update)
+  pdfname=$(fetch_pdfname "$search_url")
+  update_timetable
+  ;;
+*)
+  echo "error: invalid argument. use -h or --help for usage."
+  exit 4
+  ;;
 esac
