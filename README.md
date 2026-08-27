@@ -68,6 +68,14 @@ The Termux-side package is installed automatically by `setup_termux.sh`.
 
 If you want to use Termux widgets, install the **Termux:Widget Android plugin** from the same compatible source as your Termux installation.
 
+## Termux System Upgrade
+
+Run the following command from termux:
+
+```
+apt update && apt full-upgrade
+```
+
 ---
 
 # Setup Guide

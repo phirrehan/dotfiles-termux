@@ -78,6 +78,12 @@ setup_termux() {
 }
 
 install_nerd_font() {
+
+  if [ -f "$HOME/.termux/font.ttf" ]; then
+    echo "the font is already intalled"
+    return 0
+  fi
+
   local tmp_dir
   tmp_dir="$(mktemp -d)"
 
