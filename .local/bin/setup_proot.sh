@@ -162,8 +162,8 @@ EOF
 install_packages() {
   pacman -S --needed \
     git stow sudo \
-    zsh curl \
-    neovim fastfetch tmux yazi \
+    eza zsh figlet curl \
+    neovim ttf-jetbrains-mono-nerd fastfetch tmux yazi \
     fzf fd ffmpeg pdftk pdfgrep \
     7zip unrar unzip \
     python go rust nodejs npm \
@@ -326,7 +326,7 @@ nvim_mason_install() {
 nvim_treesitter_install() {
   sudo -u "$DOTFILES_USER" \
     env HOME="/home/$DOTFILES_USER" \
-    nvim --headless "+TSInstallSync all" +qa
+    nvim --headless "+TSInstallAll" +qa
 }
 
 setup_yazi_theme() {
@@ -441,7 +441,7 @@ Dotfiles:
 
 Enter Arch as your normal user from Termux:
 
-  proot-distro login archlinux --user $DOTFILES_USER --shared-tmp
+  proot-distro login archlinuxarm --user $DOTFILES_USER --shared-tmp
 
 To start XFCE, exit Arch and run from Termux:
 
