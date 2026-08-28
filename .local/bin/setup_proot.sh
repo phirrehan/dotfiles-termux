@@ -169,7 +169,9 @@ install_packages() {
     python go rust nodejs npm \
     dbus \
     xfce4 xfce4-goodies \
-    xorg-xinit xorg-xauth
+    xorg-xinit xorg-xauth \
+    adwaita-icon-theme gdk-pixbuf2 \
+    shared-mime-info
 }
 
 create_user() {
