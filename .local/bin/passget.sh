@@ -13,10 +13,10 @@ export PASSWORD_STORE_DIR=~/files/Passwords/store
 }
 
 # Otherwise get password name using fzf
-password_name=$(ls $PASSWORD_STORE_DIR | sed 's/\.gpg$//' | fzf --pointer '=>' --layout reverse --info hidden --header 'Select a Password')
+password_name=$(ls $PASSWORD_STORE_DIR | sed 's/\.gpg$//' | fzf --pointer '=>' --layout reverse --info hidden --header 'Select a Password' 2>/dev/null)
 
 # Exit if no password is selected
 [ -z "$password_name" ] && exit 1
 
 # Copy password
-pass -c "$password_name"
+pass "$password_name"
