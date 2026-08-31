@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/data/data/com.termux/files/usr/bin/sh
 
 # Run fzfmenu.sh to get the selected directory
 selected_dir=$(fd --type directory --hidden . ~ | ~/.local/bin/fzfmenu "Select a directory")

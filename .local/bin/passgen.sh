@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/data/data/com.termux/files/usr/bin/sh
 
 export PASSWORD_STORE_DIR="$HOME/files/Passwords/store"
 passName=$1   # First Argument is name of password

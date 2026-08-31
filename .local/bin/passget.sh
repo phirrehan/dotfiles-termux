@@ -1,22 +1,39 @@
-#!/bin/sh
+#!/data/data/com.termux/files/usr/bin/sh
 
-export PASSWORD_STORE_DIR=~/files/Passwords/store
+export PASSWORD_STORE_DIR="$HOME/files/Passwords/store"
 
-# If password name is provided in argument
-[ -n "$1" ] && {
-  arg1="$(basename $1)"
-  arg1_without_ext=${arg1%.*}
-  [ -f "$PASSWORD_STORE_DIR/$arg1_without_ext.gpg" ] && {
-    pass -c "$1"
-    exit 0
-  }
-}
+auth_token="$1"
 
-# Otherwise get password name using fzf
-password_name=$(ls $PASSWORD_STORE_DIR | sed 's/\.gpg$//' | fzf --pointer '=>' --layout reverse --info hidden --header 'Select a Password' 2>/dev/null)
+# Require an authentication token.
+[ -z "$auth_token" ] && exit 1
 
-# Exit if no password is selected
+password_name=$(
+  ls "$PASSWORD_STORE_DIR" |
+    sed 's/\.gpg$//' |
+    fzf \
+      --pointer '=>' \
+      --layout reverse \
+      --info hidden \
+      --header 'Select a Password' \
+      2>/dev/null
+)
+
+# Exit if no password is selected.
 [ -z "$password_name" ] && exit 1
 
-# Copy password
-pass "$password_name"
+# Run pass interactively.
+password=$(pass "$password_name") || exit 1
+
+echo "Sending password to PassIme..." >&2
+
+am broadcast \
+  -n com.example.passime/.PasswordReceiver \
+  -a com.example.passime.PASSWORD \
+  --es token "$auth_token" \
+  --es password "$password"
+
+broadcast_status=$?
+
+echo "Broadcast exit status: $broadcast_status" >&2
+
+exit "$broadcast_status"

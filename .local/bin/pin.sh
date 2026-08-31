@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/data/data/com.termux/files/usr/bin/sh
 
 min=1000
 max=10000

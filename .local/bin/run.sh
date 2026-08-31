@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/data/data/com.termux/files/usr/bin/sh
 
-PDFVIEWER="zathura"
+PDFVIEWER="mupdf"
 
 # Functions
 manual() {
