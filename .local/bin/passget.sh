@@ -8,7 +8,7 @@ auth_token="$1"
 [ -z "$auth_token" ] && exit 1
 
 password_name=$(
-  ls "$PASSWORD_STORE_DIR" |
+  find "$PASSWORD_STORE_DIR" -type f -regex '.+\.gpg$' -exec basename {} \; |
     sed 's/\.gpg$//' |
     fzf \
       --pointer '=>' \
@@ -21,8 +21,14 @@ password_name=$(
 # Exit if no password is selected.
 [ -z "$password_name" ] && exit 1
 
+# check if otp is selected
+printf '%s' "$password_name" |
+  grep -Eq '.+otp$' &&
+  password_name="otp/$password_name" &&
+  pass_args=("otp" "$password_name") || pass_args=("$password_name")
+
 # Run pass interactively.
-password=$(pass "$password_name") || exit 1
+password=$(pass "${pass_args[@]}") || exit 1
 
 echo "Sending password to PassIme..." >&2
 
