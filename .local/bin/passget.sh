@@ -8,8 +8,8 @@ auth_token="$1"
 [ -z "$auth_token" ] && exit 1
 
 password_name=$(
-  find "$PASSWORD_STORE_DIR" -type f -regex '.+\.gpg$' -exec basename {} \; |
-    sed 's/\.gpg$//' |
+  find "$PASSWORD_STORE_DIR" -type f -regex '.+\.gpg$' |
+    sed "s|$PASSWORD_STORE_DIR||; s|\.gpg$||" |
     fzf \
       --pointer '=>' \
       --layout reverse \
