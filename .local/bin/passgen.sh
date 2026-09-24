@@ -32,7 +32,11 @@ esac
 }
 
 passDir=$(
-  echo "$PASSWORD_STORE_DIR/*/" |
+  find "$PASSWORD_STORE_DIR" \
+    -mindepth 1 -maxdepth 1 \
+    -type d \
+    ! -name '.*' \
+    -printf '%f\n' |
     fzf \
       --pointer '=>' \
       --layout reverse \
@@ -41,26 +45,14 @@ passDir=$(
       2>/dev/null
 )
 [ -z "$passDir" ] && exit 5
-passPath="$passDir/$passName.gpg"
-
-# set commit message for git
-[ -f "$passPath" ] && commitMessage="updated $passPath" ||
-  commitMessage="added $passPath"
 
 # Generate password.
 password=$(
-  pass generate -f "$passName" "$passLength" |
-    awk 'NR==2 { gsub(/\x1B\[[0-9;]*[[:alpha:]]/, ""); printf "%s", $0 }'
+  pass generate -f "$passDir/$passName" "$passLength" |
+    awk 'END { gsub(/\x1B\[[0-9;]*[[:alpha:]]/, ""); printf "%s", $0 }'
 )
-
 [ -z "$password" ] && exit 6
 
-# Move password
-pass mv "$passName" "$passDir/" >/dev/null
-
-# commit changes
-pass git add "$passPath"
-pass git commit -m "$commitMessage"
 echo "Sending generated password to PassIme..." >&2
 
 am broadcast \
