@@ -31,13 +31,27 @@ esac
   exit 4
 }
 
+passDir=$(
+  ls "$PASSWORD_STORE_DIR" |
+    fzf \
+      --pointer '=>' \
+      --layout reverse \
+      --info hidden \
+      --header 'Select a Directory' \
+      2>/dev/null
+)
+[ -z "$passDir" ] && exit 5
+
 # Generate password.
 password=$(
   pass generate -f "$passName" "$passLength" |
     awk 'NR==2 { gsub(/\x1B\[[0-9;]*[[:alpha:]]/, ""); printf "%s", $0 }'
 )
 
-[ -z "$password" ] && exit 5
+[ -z "$password" ] && exit 6
+
+# Move password
+pass mv "$passName" "$passDir/" >/dev/null
 
 echo "Sending generated password to PassIme..." >&2
 
