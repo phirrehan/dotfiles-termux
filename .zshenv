@@ -13,7 +13,6 @@ export EDITOR="nvim"
 
 # Used for scripts
 export PASSWORD_STORE_DIR="$HOME/files/pass-store"
-export PASSWORD_STORE_ENABLE_GIT=false 
 
 # Rust / Cargo
 export CARGO_HOME="$XDG_DATA_HOME/cargo"
