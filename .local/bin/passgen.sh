@@ -1,6 +1,6 @@
 #!/data/data/com.termux/files/usr/bin/sh
 
-export PASSWORD_STORE_DIR="$HOME/files/Passwords/store"
+source "$HOME/.zshenv"
 
 auth_token="$1"
 passName="$2"
