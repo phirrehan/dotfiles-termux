@@ -12,7 +12,7 @@ export ZDOTDIR="$XDG_CONFIG_HOME/zsh"
 export EDITOR="nvim"
 
 # Used for scripts
-export PASSWORD_STORE_DIR="$HOME/files/Passwords/store"
+export PASSWORD_STORE_DIR="$HOME/files/pass-store"
 
 # Rust / Cargo
 export CARGO_HOME="$XDG_DATA_HOME/cargo"
