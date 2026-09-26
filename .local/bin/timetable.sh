@@ -1,98 +1,114 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
-### Variables ###
+set -u
+
+kind="class"
+department="CS"
+section="SP25-BSE-A"
+
 termux_prefix="/data/data/com.termux/files/home"
 timetable_dir="$termux_prefix/storage/downloads/timetable"
-old_pdf_name="$(ls $timetable_dir | grep -oP '.+-classes\.pdf')"
-base_url="https://lahore.comsats.edu.pk"
-search_url="$base_url/downloads.aspx"
-download_url="$base_url/student" #incomplete as of yet
 
-### Functions ###
-help() {
-  cat <<EOF
-  Usage: $0 <args>
-  Arguments        |        Function"
-  -h or --help     | print this message"
-  get_pdfname      | fetches the pdfname from timetable directory
-  update           | update the timetable"
-EOF
-}
-check_deps() {
-  local missing=()
-  local deps=(curl_chrome131_android grep pdfgrep pdftk)
-  for cmd in "${deps[@]}"; do
-    command -v "$cmd" >/dev/null 2>&1 || missing+=("$cmd")
-  done
+url="https://sfs.cuilahore.edu.pk/schedule/Public/Timetable?Kind=$kind&Dept=$department&Who=$section"
 
-  if ((${#missing[@]})); then
-    echo "Missing required dependencies:" >&2
-    for cmd in "${missing[@]}"; do
-      echo "  - $cmd" >&2
-    done
-    exit 3
-  fi
+html_file="$(mktemp)"
+new_pdf="$timetable_dir/.new-timetable.pdf"
+chromium_bin="chromium-browser"
+
+cleanup() {
+  rm -f "$html_file" "$new_pdf"
 }
-fetch_pdfname() {
-  html=$(curl_chrome131_android -s "$search_url") &&
-    printf $(echo $html | grep -oE '[^/]+-classes\.pdf') ||
-    echo "pdfname fetch failed :(" && exit 5
-}
-download_pdf() {
-  rm "$timetable_dir/full_timetable.pdf" 2>/dev/null
-  curl_chrome131_android -o full_timetable.pdf "$download_url/$pdfname" || {
-    echo ":( Download failed! Try again."
-    exit 6
-  }
-}
-extract_page() {
-  local page="$(pdfgrep -n -i 'sp25-bse-a' "full_timetable.pdf" | cut -d: -f1 | sort -u)"
-  pdftk "full_timetable.pdf" cat "$page" output "$pdfname"
-  mv "$pdfname" full_timetable.pdf "$timetable_dir"
-}
-update_timetable() {
-  # check internet access
-  ping -c 1 google.com &>/dev/null || {
-    echo "Internet is not available."
-    exit 1
-  }
-  if [ -n "$old_pdf_name" ]; then
-    if [ "$pdfname" = "$old_pdf_name" ]; then
-      echo "Timetable has not changed."
-      exit 0
-    else
-      echo "Timetable has updated."
-      echo "deleteing old pdf: $old_pdf_name"
-      rm "$timetable_dir/$old_pdf_name"
-      echo "Downloading Timetable..."
-    fi
-  else
-    echo "Old Pdf not found."
-    echo "Downloading Timetable..."
-  fi
-  download_pdf && extract_page
-  echo "Timetable Updated Successfully."
+trap cleanup EXIT
+
+mkdir -p "$timetable_dir" || {
+  echo "Could not create timetable directory."
+  exit 1
 }
 
-### Error Handeling ###
-## check dependencies
-check_deps
-## check if timetable_dir exists and is a directory
-[ -d "$timetable_dir" ] || {
-  echo "timetable_dir: $timetable_dir is not a valid directory."
+ping -c 1 github.com &>/dev/null || {
+  echo "Internet is not available."
+  exit 1
+}
+
+command -v "$chromium_bin" &>/dev/null || {
+  echo "Could not find chromium-browser."
+  exit 1
+}
+
+curl -sk "$url" -o "$html_file" || {
+  echo "Failed to download timetable HTML."
   exit 2
 }
 
-### Argument Handling ###
-case "$1" in
--h | --help) help ;;
-get_pdfname) echo "$old_pdf_name" ;;
-update)
-  pdfname=$(fetch_pdfname "$search_url")
-  update_timetable
-  ;;
-*)
-  echo "error: invalid argument. use -h or --help for usage."
+version_date=$(
+  grep -oE 'v\.[[:space:]]*[0-9]{4}-[0-9]{2}-[0-9]{2}' "$html_file" |
+    head -n 1 |
+    grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}'
+)
+
+if [ -z "$version_date" ]; then
+  echo "Could not find timetable version date in HTML."
+  exit 3
+fi
+
+old_pdf=""
+
+for file in "$timetable_dir"/*.pdf; do
+  [ -f "$file" ] || continue
+  old_pdf="$file"
+  break
+done
+
+old_pdf_date=""
+
+if [ -n "$old_pdf" ]; then
+  old_pdf_name="$(basename "$old_pdf")"
+  old_pdf_date=$(
+    printf '%s\n' "$old_pdf_name" |
+      grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}(?=\.pdf$)' |
+      tail -n 1
+  )
+fi
+
+if [ -n "$old_pdf" ] &&
+  [ -n "$old_pdf_date" ] &&
+  [ "$old_pdf_date" = "$version_date" ]; then
+  echo "Timetable has not changed."
+  exit 0
+fi
+
+pdfname="${section}-${version_date}.pdf"
+pdf_path="$timetable_dir/$pdfname"
+
+echo "Timetable has updated."
+echo "Generating $pdfname..."
+
+"$chromium_bin" \
+  --headless \
+  --no-sandbox \
+  --disable-gpu \
+  --print-to-pdf="$new_pdf" \
+  "$url" \
+  >/dev/null 2>&1
+
+if [ $? -ne 0 ] || [ ! -s "$new_pdf" ]; then
+  echo "Download failed."
   exit 4
-  ;;
-esac
+fi
+
+if ! head -c 5 "$new_pdf" | grep -q '^%PDF-'; then
+  echo "Invalid PDF generated."
+  exit 5
+fi
+
+mv "$new_pdf" "$pdf_path" || {
+  echo "Could not save PDF."
+  exit 6
+}
+
+if [ -n "$old_pdf" ] && [ "$old_pdf" != "$pdf_path" ]; then
+  rm -f "$old_pdf"
+fi
+
+echo "Timetable successfully updated."
+echo "Saved: $pdf_path"
